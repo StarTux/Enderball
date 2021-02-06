@@ -1,0 +1,27 @@
+main: com.cavetale.enderball.EnderballPlugin
+
+name: Enderball
+version: 0.1
+description: Enderball Plugin
+api-version: 1.13
+
+author: StarTux
+website: https://github.com/StarTux/Enderball
+
+depend: [WorldEdit, Core]
+softdepend: []
+
+commands:
+
+  enderball:
+    aliases: []
+    description: Enderball Command
+    permission: enderball.enderball
+    usage: |-
+      /enderball
+
+permissions:
+
+  enderball.enderball:
+    description: Use /enderball
+    default: op

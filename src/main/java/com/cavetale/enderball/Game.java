@@ -229,6 +229,17 @@ public final class Game {
         } else {
             team = team.other();
             kickoffVector = board.getField().clamp(Vec3i.of(block)).withY(board.getField().getMin().y);
+            // WARNING: Expects board along z axis!
+            if ((team == GameTeam.RED && kickoffVector.z >= board.getField().getMax().z)
+                || (team == GameTeam.BLUE && kickoffVector.z <= board.getField().getMin().z)) {
+                int dist1 = Math.abs(kickoffVector.x - board.getField().getMin().x);
+                int dist2 = Math.abs(kickoffVector.x - board.getField().getMax().x);
+                if (dist1 < dist2) {
+                    kickoffVector = kickoffVector.withX(board.getField().getMin().x);
+                } else {
+                    kickoffVector = kickoffVector.withX(board.getField().getMax().x);
+                }
+            }
         }
         state.setKickoffTeam(team != null ? team.toIndex() : random.nextInt(2));
         Block block2 = kickoffVector.toBlock(getWorld());
@@ -410,7 +421,7 @@ public final class Game {
             String title;
             if (winnerTeam != null) {
                 text = "Team " + winnerTeam.chatColor + winnerTeam.humanName + ChatColor.RESET + " wins!";
-                title = "" + winnerTeam.chatColor + winnerTeam.humanName;
+                title = "" + winnerTeam.chatColor + winnerTeam.humanName + " Wins!";
                 plugin.getLogger().info("Winner: " + winnerTeam.humanName);
             } else {
                 text = "It's a draw!";
@@ -419,7 +430,7 @@ public final class Game {
             }
             for (Player target : getPresentPlayers()) {
                 target.sendMessage(text);
-                target.sendTitle(new Title(title, getScoreString(), 0, 20, 0));
+                target.sendTitle(new Title(title, getScoreString(), 20, 60, 20));
             }
             bossBar.setTitle(title);
             break;

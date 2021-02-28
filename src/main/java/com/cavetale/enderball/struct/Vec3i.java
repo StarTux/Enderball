@@ -50,4 +50,12 @@ public final class Vec3i {
     public Vec3i withY(int newY) {
         return new Vec3i(x, newY, z);
     }
+
+    public Vec3i withX(int newX) {
+        return new Vec3i(newX, y, z);
+    }
+
+    public Vec3i withZ(int newZ) {
+        return new Vec3i(x, y, newZ);
+    }
 }

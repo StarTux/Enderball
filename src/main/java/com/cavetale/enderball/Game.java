@@ -6,6 +6,8 @@ import com.cavetale.enderball.util.Fireworks;
 import com.cavetale.enderball.util.Gui;
 import com.cavetale.enderball.util.Items;
 import com.cavetale.enderball.util.Json;
+import com.cavetale.sidebar.PlayerSidebarEvent;
+import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.Title;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -491,9 +493,15 @@ public final class Game {
         state.setPhase(phase);
         switch (phase) {
         case IDLE:
+            bossBar.setTitle(ChatColor.GRAY + "Paused");
+            resetGame();
+            break;
+        case WAIT_FOR_PLAYERS:
+            removeAllBalls();
+            bossBar.setTitle(ChatColor.GRAY + "Preparing the Game");
+            state.setWaitForPlayersStarted(System.currentTimeMillis());
             break;
         case TEAMS:
-            resetGame();
             makeTeams();
             setupPhase(GamePhase.PICK_FLAG);
             break;
@@ -587,6 +595,21 @@ public final class Game {
         }
         switch (state.getPhase()) {
         case IDLE: return;
+        case WAIT_FOR_PLAYERS: {
+            List<Player> players = getEligiblePlayers();
+            if (players.isEmpty()) {
+                state.setWaitForPlayersStarted(System.currentTimeMillis());
+                return;
+            }
+            long total = 30000;
+            long timeLeft = timeLeft(state.getWaitForPlayersStarted(), total);
+            if (timeLeft <= 0) {
+                newPhase(GamePhase.TEAMS);
+            } else {
+                bossBar.setProgress(clamp1((double) timeLeft / (double) total));
+            }
+            break;
+        }
         case PICK_FLAG: {
             long total = 30000;
             long timeLeft = timeLeft(state.getPickFlagStarted(), total);
@@ -679,7 +702,8 @@ public final class Game {
             long total = 1000L * 30L;
             long timeLeft = timeLeft(state.getEndStarted(), total);
             if (timeLeft <= 0) {
-                newPhase(GamePhase.PLAYERS);
+                resetGame();
+                newPhase(GamePhase.WAIT_FOR_PLAYERS);
             } else {
                 if ((fireworkTicks++ % 10) == 0) {
                     Cuboid field = board.getField();
@@ -790,5 +814,55 @@ public final class Game {
         gameBall.setLastKicker(player.getUniqueId());
         fallingBlock.setVelocity(velocity.setX(0).setZ(0));
         fallingBlock.getWorld().playSound(fallingBlock.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.5f);
+    }
+
+    public void onSidebar(PlayerSidebarEvent event, Player player) {
+        if (player.getGameMode() == GameMode.SPECTATOR) return;
+        switch (state.getPhase()) {
+        case WAIT_FOR_PLAYERS: {
+            String[] lines = {
+                ChatColor.GREEN + "Game starting soon!",
+                ChatColor.GRAY + "Stand on the playing",
+                ChatColor.GRAY + "field to join."
+            };
+            event.addLines(plugin, Priority.DEFAULT, lines);
+            break;
+        }
+        case PICK_FLAG: {
+            GameTeam team = getTeam(player);
+            if (team == null) return;
+            StringBuilder sb = new StringBuilder(team.chatColor + "Your team:" + ChatColor.WHITE);
+            List<String> lines = new ArrayList<>();
+            for (Player member : getTeamPlayers(team)) {
+                String name = member.getName();
+                if (sb.length() + 1 + name.length() >= 48) {
+                    lines.add(sb.toString());
+                    sb = new StringBuilder(name);
+                } else {
+                    sb.append(" ").append(name);
+                }
+            }
+            if (sb.length() > 0) lines.add(sb.toString());
+            event.addLines(plugin, Priority.DEFAULT, lines);
+            break;
+        }
+        case KICKOFF: case PLAY: case GOAL: {
+            GameTeam team = getTeam(player);
+            if (team == null) return;
+            String[] lines = {
+                ChatColor.GRAY + "Right Click Block",
+                ChatColor.WHITE + "  Shallow Kick",
+                ChatColor.GRAY + "Left Click Block",
+                ChatColor.WHITE + "  High Kick",
+                ChatColor.GRAY + "Sprint",
+                ChatColor.WHITE + "  Strong Kick",
+                ChatColor.GRAY + "Right Click Falling Ball",
+                ChatColor.WHITE + "  Body Block",
+            };
+            event.addLines(plugin, Priority.DEFAULT, lines);
+            break;
+        }
+        default: break;
+        }
     }
 }

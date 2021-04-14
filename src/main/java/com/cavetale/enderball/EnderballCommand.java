@@ -107,7 +107,8 @@ public final class EnderballCommand implements TabExecutor {
     }
 
     boolean start(CommandSender sender, String[] args) {
-        plugin.getGame().newPhase(GamePhase.TEAMS);
+        plugin.getGame().resetGame();
+        plugin.getGame().newPhase(GamePhase.WAIT_FOR_PLAYERS);
         sender.sendMessage("Game started");
         return true;
     }

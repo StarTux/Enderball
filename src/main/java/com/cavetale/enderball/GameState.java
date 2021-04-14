@@ -18,6 +18,7 @@ public final class GameState implements Serializable {
     private List<Integer> scores = Arrays.asList(0, 0);
     private Map<UUID, GameTeam> teams = new HashMap<>();
     private List<Nation> nations = new ArrayList<>();
+    private long waitForPlayersStarted;
     private long pickFlagStarted;
     private long gameStarted;
     private long kickoffStarted;

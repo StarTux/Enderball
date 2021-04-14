@@ -1,5 +1,6 @@
 package com.cavetale.enderball;
 
+import com.cavetale.sidebar.PlayerSidebarEvent;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -115,5 +116,12 @@ public final class EventListener implements Listener {
     void onInventoryDrag(InventoryDragEvent event) {
         if (event.getWhoClicked().isOp()) return;
         event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.NORMAL)
+    void onPlayerSidebar(PlayerSidebarEvent event) {
+        Player player = event.getPlayer();
+        Game game = plugin.getGameAt(player.getLocation());
+        if (game != null) game.onSidebar(event, player);
     }
 }

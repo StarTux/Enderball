@@ -14,6 +14,7 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDropItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -75,6 +76,20 @@ public final class EventListener implements Listener {
         Game game = plugin.getGameAt(block);
         if (game == null) return;
         game.onKickBall(player, block, event);
+    }
+
+    @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
+    void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        // EntityDamageByEntityEvent is not fired when left clicking
+        // falling blocks!
+        if (!(event.getRightClicked() instanceof FallingBlock)) return;
+        FallingBlock fallingBlock = (FallingBlock) event.getRightClicked();
+        if (fallingBlock.getMaterial() != Material.DRAGON_EGG) return;
+        Game game = plugin.getGameAt(fallingBlock.getLocation());
+        if (game == null) return;
+        event.setCancelled(true);
+        Player player = event.getPlayer();
+        game.onHeaderBall(player, fallingBlock);
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)

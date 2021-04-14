@@ -193,33 +193,37 @@ public final class Game {
         state.getBalls().add(gameBall);
     }
 
-    GameTeam getGoal(Block block) {
+    GameTeam getGoal(Vec3i vec) {
         for (int i = 0; i < 2; i += 1) {
             Cuboid cuboid = board.getGoals().get(i);
-            if (cuboid.contains(block)) return GameTeam.of(i);
+            if (cuboid.contains(vec)) return GameTeam.of(i);
         }
         return null;
     }
 
+    boolean ballZoneAction(GameBall gameBall) {
+        GameTeam goal = getGoal(gameBall.getBlockVector());
+        if (goal != null) {
+            scoreGoal(goal, gameBall); // calls removeAllBalls()
+            return true;
+        }
+        if (!board.getField().contains(gameBall.getBlockVector())) {
+            kickoff(gameBall.getBlockVector(), gameBall.getLastKicker()); // calls removeAllBalls()
+            return true;
+        }
+        return false;
+    }
+
     public void onBallLand(FallingBlock entity, Block block, EntityChangeBlockEvent event) {
         GameBall gameBall = getOrCreateBall(entity);
+        gameBall.setBlockVector(Vec3i.of(block));
         if (state.getPhase() == GamePhase.PLAY) {
-            GameTeam goal = getGoal(block);
-            if (goal != null) {
-                entity.remove();
+            if (ballZoneAction(gameBall)) {
                 event.setCancelled(true);
-                scoreGoal(goal, gameBall);
-                return;
-            }
-            if (!board.getField().contains(entity.getLocation())) {
-                entity.remove();
-                event.setCancelled(true);
-                kickoff(block, gameBall.getLastKicker());
                 return;
             }
         }
         gameBall.setEntityUuid(null);
-        gameBall.setBlockVector(Vec3i.of(block));
         gameBall.setLastKicker(null);
     }
 
@@ -234,21 +238,14 @@ public final class Game {
         if (gameBall == null) {
             entity.remove();
         }
-        removeBall(gameBall);
         if (state.getPhase() == GamePhase.PLAY) {
-            GameTeam goal = getGoal(entity.getLocation().getBlock());
-            if (goal != null) {
-                scoreGoal(goal, gameBall);
-                return;
-            }
-            if (!board.getField().contains(entity.getLocation())) {
-                kickoff(entity.getLocation().getBlock(), gameBall.getLastKicker());
-                return;
+            if (!ballZoneAction(gameBall)) {
+                removeBall(gameBall);
             }
         }
     }
 
-    void kickoff(Block block, UUID lastKicker) {
+    void kickoff(Vec3i vec, UUID lastKicker) {
         removeAllBalls();
         GameTeam team = state.getTeams().get(lastKicker);
         Vec3i kickoffVector;
@@ -256,7 +253,7 @@ public final class Game {
             kickoffVector = board.getKickoff();
         } else {
             team = team.other();
-            kickoffVector = board.getField().clamp(Vec3i.of(block)).withY(board.getField().getMin().y);
+            kickoffVector = board.getField().clamp(vec).withY(board.getField().getMin().y);
             // WARNING: Assumes board along z axis!
             if ((team == GameTeam.RED && kickoffVector.z >= board.getField().getMax().z)
                 || (team == GameTeam.BLUE && kickoffVector.z <= board.getField().getMin().z)) {
@@ -270,8 +267,8 @@ public final class Game {
             }
         }
         state.setKickoffTeam(team != null ? team.toIndex() : random.nextInt(2));
-        Block block2 = kickoffVector.toBlock(getWorld());
-        block2.setType(Material.DRAGON_EGG, false);
+        Block block = kickoffVector.toBlock(getWorld());
+        block.setType(Material.DRAGON_EGG, false);
         GameBall gameBall = new GameBall();
         gameBall.setBlockVector(kickoffVector);
         state.getBalls().add(gameBall);
@@ -298,7 +295,7 @@ public final class Game {
     }
 
     void scoreGoal(GameTeam goal, GameBall gameBall) {
-        removeBall(gameBall);
+        removeAllBalls();
         if (state.getPhase() != GamePhase.PLAY) return;
         GameTeam team = goal.other();
         int index = team.toIndex();
@@ -395,6 +392,7 @@ public final class Game {
             state.getNations().add(nation);
             for (Player player : getTeamPlayers(team)) {
                 player.sendMessage(team.chatColor + "Your team flag is " + nation.name);
+                player.sendTitle(new Title("", team.chatColor + nation.name, 10, 20, 10));
             }
         }
         teamFlagItems.clear();
@@ -627,6 +625,13 @@ public final class Game {
             break;
         }
         case PLAY: {
+            for (GameBall gameBall : new ArrayList<>(state.getBalls())) {
+                FallingBlock fallingBlock = gameBall.getEntity();
+                if (fallingBlock != null) {
+                    gameBall.setBlockVector(Vec3i.of(fallingBlock.getLocation()));
+                }
+                if (ballZoneAction(gameBall)) return;
+            }
             long total = 60L * 10L * 1000L;
             long timeLeft = timeLeft(state.getGameStarted(), total);
             if (timeLeft <= 0) {
@@ -773,5 +778,17 @@ public final class Game {
     public String getTeamName(GameTeam team) {
         if (state.getNations().size() != 2) return team.humanName;
         return state.getNations().get(team.ordinal()).name;
+    }
+
+    public void onHeaderBall(Player player, FallingBlock fallingBlock) {
+        Vector velocity = fallingBlock.getVelocity();
+        if (velocity.getY() >= 0) return; // Rising ball cannot be blocked!
+        if (Math.abs(velocity.getX()) < 0.01 && Math.abs(velocity.getZ()) < 0.01) return; // Already blocked!
+        GameTeam team = getTeam(player);
+        if (team == null) return;
+        GameBall gameBall = getOrCreateBall(fallingBlock);
+        gameBall.setLastKicker(player.getUniqueId());
+        fallingBlock.setVelocity(velocity.setX(0).setZ(0));
+        fallingBlock.getWorld().playSound(fallingBlock.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.5f);
     }
 }

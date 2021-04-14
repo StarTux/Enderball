@@ -1,14 +1,11 @@
 package com.cavetale.enderball.util;
 
-import com.cavetale.enderball.GameTeam;
 import java.util.Base64;
 import java.util.List;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 public final class Items {
     private Items() { }
@@ -19,15 +16,9 @@ public final class Items {
         return result;
     }
 
-    public static ItemStack deserialize(String serialized, String name, GameTeam team) {
+    public static ItemStack deserialize(String serialized) {
         byte[] bytes = Base64.getDecoder().decode(serialized);
-        ItemStack item = ItemStack.deserializeBytes(bytes);
-        ItemMeta meta = item.getItemMeta();
-        meta.addItemFlags(ItemFlag.values());
-        meta.setDisplayName(team.chatColor + name);
-        item.setItemMeta(meta);
-        item.setAmount(1);
-        return item;
+        return ItemStack.deserializeBytes(bytes);
     }
 
     public static void give(Player player, ItemStack... items) {

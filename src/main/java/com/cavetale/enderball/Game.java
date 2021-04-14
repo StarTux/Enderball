@@ -13,7 +13,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
-import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.md_5.bungee.api.ChatColor;
@@ -63,30 +62,7 @@ public final class Game {
     private BossBar bossBar;
     private int hungerTicks = 0;
     private int fireworkTicks = 0;
-    private List<ItemStack> teamFlagItems = new ArrayList<>(); 
-    List<Nation> nations = Arrays
-        .asList(new Nation("Denmark", "H4sIAAAAAAAAAC3KsQ6CQBBF0QdoWNbEysqSCuMfWKJ2xlgQWzPCSjbirJkdC/7eEL3dSa4FMiwOpHR1En1gwK4NUt9h9fLsWqGH7sR1tzsxO7HIlHqLvPPxPdBYYHYK4gyABKastue62ZSwWNZDaJ9HVq9jQ30BcyFVJxzt9BrkfyONbYb5PgxB8CuZ+GFN8AUlcpDTnwAAAA=="),
-                new Nation("UK", "H4sIAAAAAAAAAJ3OvQrCQBAE4DGHGE9IZ+OjWPrTW4itbC5nOLzswd6m8O01YGEKU2S74WOGtYDB5kRKNy85JAbsrkQRGmy7wN4JPXRfx97fa2L2YmGUWovqEJN7nlmDvq7UrlFeSNULZ4vPRonVN8M0MRssjykmwXAjkwmb1yuc/FA1ponWf+pmUXajN4DFEHvWAm+OsPJfdgEAAA=="),
-                new Nation("Germany", "H4sIAAAAAAAAAE3Juw7CMAxG4b8JiBAkWJh4FEYuOwNiRaY1VdTgSI4ZeHuKxNDhDEdfBDxWJzK6sdZUBIi7AJc6bF9JuFV62l65uz9IhDXCG/UR60Mu7XAWS/a5Ur9EuJAZq9QIwAUs/g+Xq8f8WHLRUTaYkk5pNtb89i3W4AtmrsszmQAAAA=="),
-                new Nation("Austria", "H4sIAAAAAAAAAFXJsQrCMBAG4N8EMUbo6OCjOKrdO4irnDXWo/EClxPx7VVw0PHji4DHYkdGh6SViwBxFeD4jOWNJfVKF1s/rmzpeCKRpBHeaIhoNrn0YyvG9tzTMEfoyCyp1AjABcy+hsvVY7otueh7GvyW/hcw+fAu5vACZm89qJsAAAA="),
-                new Nation("Brazil", "H4sIAAAAAAAAAFXJMQvCMBCG4c9EMU3B0cGf4qh2dxBXOeMZgu0Frufgv7eCgw7v8PJEwKM9kNGZdSxVgLgJcOWG9VCEk9LdtlmZ5XIlEdYIb5QjVru+pkcnVux1otwgHMmMVcYIwAUsvw83qMdiX/uqk8zxR+mH2qnZZ59iDm8X07OImwAAAA=="),
-                new Nation("Belgium", "H4sIAAAAAAAAAE3JuwoCMRBG4d8EMUZYS8FHsfTSW4itzK7jEowzkIzIvr0rWGxxisMXAY/VkYyuXGpSAeI2wKU7Nq8k3BV62G7gnPVza0mES4Q36iOafdbueRJLNlyoXyKcyYyL1AjABSz+D2fVY37QrGWUNabUTqkZm/32LebwBRvSzgycAAAA"),
-                new Nation("Canada", "H4sIAAAAAAAAAHXNPQvCMBSF4WOCtEbo6OBPcfRjdxBXuY2xDTY3kFwV/70KDu2Q8fBweA2gsdyT0Nml7CMDZl1D+StWwbOziW6yefVe3KUlZpcMtFBn0GyHaO8HFi/vE3UL1EcScYmzAVDVqP4byiaN+S4OMX2lwZhCLpG2bRwZJrdnX6RgizEpxlQ7JWD2mw8WhQ8OR93KIwEAAA=="),
-                new Nation("France", "H4sIAAAAAAAAAE3JMQvCMBCG4c8EMU2ho4M/xVHt7iCucq1nDdYLXE7Ef28Fhw7v8PJEwKM+kNGZtaQsQNwEuHTF+pmEe6Wbbd/3ZHzpSIQ1whsNEc1uzP2jFUv2OdFQIRzJjFVKBOACVv+Hs+Kx3Ocx6yQ15tTNqZla/PYl5vAFRMyVH5sAAAA="),
-                new Nation("Ireland", "H4sIAAAAAAAAAE3JsQrCMBAG4N+EYhrB0cFHcdS6O4irXOtZj9YLJCfi21vEoePHFwGPVUNGF85FkgJxG+Dkhs1TlLtMd9u9H2J8bUmVc4Q36iPW+zF1w1FN7HOmvkY4kRlnLRGAC1j+DdcWj+qQxpSnWWBeNq/q1xNfag5f4NQhi5sAAAA="),
-                new Nation("Mexico", "H4sIAAAAAAAAAFXMuwoCMRSE4TFBjFG3tPBRLL30FmIrZ2PcDe6eQHJEfHsjWMRiip8PxgIaiwMJXXzKITJgNwYq3LAeA3uX6C7bVx/EX1ti9slCC3UWzW6I7nFkCfI+UzeHOZGIT5wtyqnB7NdQkjWm+zjEVKRBTW1Nqz8aXUXLssk3nywKH4a3gJm2AAAA"),
-                new Nation("Netherlands", "H4sIAAAAAAAAAI3JvQ5BQRAG0M8useYmt1R4FKWfXiFaGde6NtZsMjsi3h6JQiXKk0OAR7Ni413UmooANAtw6YjpNUnslE82v5+Txf2BRaISvHFPaBe5dJe1WLLHlvsJwobNokolAMOA8cdwWj1Gy5KLvqbFn5W/q/lVwODNm5jDE+IRw2vRAAAA"),
-                new Nation("Poland", "H4sIAAAAAAAAAE3JuwrCQBBG4d9dxHWElBY+iqWX3kJsZYxrdkmchckY8e01YJHTHT4CPFYHNr5E7XMRgDYBLt+xfmaJtfLDtu+ULV5vLBKV4I0bQrXrSt0exbJ9ztwsEU5sFlV6AuACFv+HH5J6zPelK/qjChNzQ5rQ2Gzcl5jDFxCI6COcAAAA"),
-                new Nation("Russia", "H4sIAAAAAAAAAKXJwQ4BMRAG4F8bVDfZo4NHcWT37iCuMqrWRE2TdkS8PRIHZ45fPg9YNB0p7WKpnAXwCwfDR8yvLDEUOunyfmaN+wOJxOJhlQaPdpVyuPSirI8tDTO4DanGItUDmDhMP4ZJ1WK8zimX17T4v8J3NT8WMHrzJmrwBIAiSiUHAQAA"),
-                new Nation("Spain", "H4sIAAAAAAAAAHXJvQrCMBQG0M/GYo3SVfBRHP3ZHcRVbmtqo+m9kF6Rvr0KDungeDgWMFjsSensYu+FAbsukPkrVp1nV0dqdDO4EOR1qYjZRQujdLMot0Hqx4HV63Ci2xzFkVRd5N4CyAvMfobp5G6Q7yRI/NQS6TVB/l7bVslN08tCn1Q5qjguYPLlkzXDG+0i9RvwAAAA"),
-                new Nation("Sweden", "H4sIAAAAAAAAAJ3MsQrCMBSF4WNiMabgKvgojtruDuIqtzG2wXgDyRXp21vBwVEczvDzwbGARt2Q0MnnEhIDdmOgwgXre2DvMl1lO/oY0/PcEbPPFlqot1jtYnK3liXIeKR+CXMgEZ+5WACVweLTUFI0qn2KKU9S4zfSw9D9Y8p9X86nzd75YFF4AbvWklrvAAAA"),
-                new Nation("Ukraine", "H4sIAAAAAAAAAH3JPQoCMRAG0M9EMUbwAHoTS396C7FdZtcxOxgnkJ0VvL0K1paPFwGP5YGMLlwHKQrEdYCTKzYPUe4q3WybJfXWtHnkpiVVrhHeKEWsdrl096Oa2OtMaYFwIjOuOkQALmD+M9yz95jtSy71M1P8KWDy5ajm8AZ1xLEMoAAAAA=="),
-                new Nation("USA", "H4sIAAAAAAAAAE2JvQrCQBAGP+8Qzw1YWfkolv70KcRW1uQMh5c92NsUvr0GLDIwxTAEeDQXNr5HrakIQIcAl3rsxySxU37ZUWP/eLJIVII3Hgi7Uy7d+yqW7HPjYYvQsllUqQTABWz+DVerx/pcclHMLJflxWp+ruacxBy+DPYRHpkAAAA="),
-                new Nation("Italy", "H4sIAAAAAAAAAI3JPQ8BQRAG4NcusUZcqfBTlD56hWhl7qy7jTObzI6If49EoRLlk4cAj+mGjQ9RS8oC0CLApRPm1ySxUT7b8t4li8eaRaISvHFLqFZ9bi5bsWSPPbcThB2bRZVCAIYB44/hrHiM1rnP+poZ/qz6u6pfBQzevIk5PAHLPNgt0QAAAA=="),
-                new Nation("Switzerland", "H4sIAAAAAAAAAH3JsQrCMBRG4d+EYozQyclHcbS6O4ir3KaxBNsbuLkOvr0UHNpBz3b4PGCxPZHSLUpJmQG/dzCpw25MHIPQQw8Su3tLzFE8rFLvUR+HHJ5n1qTvK/UbuAupRuHiAVQO6+/DhGJRNXnIgqk5jb9J51QvqP1DeUHAatoXq8EH9v2cIuoAAAA="),
-                new Nation("South Korea", "H4sIAAAAAAAAAHXMvQrCMBSG4c8EaU1BFycvxdGf3UFc5aSNJbSeQHI6ePcqODRCxpcHXgNoNCcSurmYfGDA7Goo32H79OzaSA/ZR9fdLTG7aKCFeoP1YQztcGbx8rpSv0J9IREXORkAVY3q19Dj1Gksj2EM8UMNZqYkzQgZ2SLp1oai2Wy5yUzKpv6WwOKbE4vCG88mtgYkAQAA"),
-                new Nation("Norway", "H4sIAAAAAAAAAHXJuwoCMRBG4d9EMWZhSwsfxdJLbyG2Msa4hs1OIBkR394VLGJhcYrDZwGNZkdCJ59LSAzYlYEKVyyHwN5lusn6eQ/izxdi9tlCC3UW7SYm1+9ZgryO1C1gDiTiMxcLYGow/z5ULhqzbYopj9KipvifhprwQ8VV1IxNPvtgUXgD30GWRdEAAAA=")
-                );
+    private List<ItemStack> teamFlagItems = new ArrayList<>();
 
     public void enable() {
         board.prep();
@@ -94,10 +70,10 @@ public final class Game {
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
         bossBar = Bukkit.createBossBar("Enderball", BarColor.GREEN, BarStyle.SOLID);
         bossBar.setVisible(true);
-        if (state.getTeamFlags().size() == 2 && state.getTeamNames().size() == 2) {
+        if (state.getNations().size() == 2) {
             teamFlagItems.clear();
-            teamFlagItems.add(Items.deserialize(state.getTeamFlags().get(0), state.getTeamNames().get(0), GameTeam.RED));
-            teamFlagItems.add(Items.deserialize(state.getTeamFlags().get(1), state.getTeamNames().get(1), GameTeam.BLUE));
+            teamFlagItems.add(state.getNations().get(0).makeTeamFlag(GameTeam.RED));
+            teamFlagItems.add(state.getNations().get(1).makeTeamFlag(GameTeam.BLUE));
         }
     }
 
@@ -377,27 +353,16 @@ public final class Game {
         player.teleport(board.getOutside().toLocation(getWorld()), TeleportCause.PLUGIN);
     }
 
-    @Data
-    static final class Nation {
-        protected final String name;
-        protected final String base64;
-    }
-
     void makeFlags() {
+        List<Nation> nations = new ArrayList<>(Arrays.asList(Nation.values()));
         Collections.shuffle(nations);
-        List<String> teamFlags = new ArrayList<>();
-        List<String> teamNames = new ArrayList<>();
-        Nation red = nations.get(0);
-        Nation blue = nations.get(1);
-        teamFlags.add(red.base64);
-        teamFlags.add(blue.base64);
-        teamNames.add(red.name);
-        teamNames.add(blue.name);
-        state.setTeamFlags(teamFlags);
-        state.setTeamNames(teamNames);
+        Nation redNation = nations.get(0);
+        Nation blueNation = nations.get(1);
+        List<Nation> teamNations = Arrays.asList(redNation, blueNation);
+        state.setNations(teamNations);
         teamFlagItems.clear();
-        teamFlagItems.add(Items.deserialize(red.base64, red.name, GameTeam.RED));
-        teamFlagItems.add(Items.deserialize(blue.base64, blue.name, GameTeam.BLUE));
+        teamFlagItems.add(redNation.makeTeamFlag(GameTeam.RED));
+        teamFlagItems.add(blueNation.makeTeamFlag(GameTeam.BLUE));
         // WARNING: Assumes board along z axis!
         int centerZ = board.getArea().getCenter().getZ();
         for (Chunk chunk : getWorld().getLoadedChunks()) {
@@ -678,7 +643,7 @@ public final class Game {
     }
 
     public String getTeamName(GameTeam team) {
-        if (state.getTeamNames().size() != 2) return team.humanName;
-        return state.getTeamNames().get(team.ordinal());
+        if (state.getNations().size() != 2) return team.humanName;
+        return state.getNations().get(team.ordinal()).name;
     }
 }

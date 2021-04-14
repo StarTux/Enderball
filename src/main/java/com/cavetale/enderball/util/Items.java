@@ -4,8 +4,11 @@ import java.util.Base64;
 import java.util.List;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 public final class Items {
     private Items() { }
@@ -38,5 +41,12 @@ public final class Items {
             if (materialName.startsWith(dyeColor.name())) return dyeColor;
         }
         return null;
+    }
+
+    public static void glow(ItemStack itemStack) {
+        ItemMeta meta = itemStack.getItemMeta();
+        meta.addEnchant(Enchantment.DURABILITY, 1, true);
+        meta.addItemFlags(ItemFlag.values());
+        itemStack.setItemMeta(meta);
     }
 }

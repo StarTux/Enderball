@@ -1,5 +1,6 @@
 package com.cavetale.enderball;
 
+import com.cavetale.enderball.util.Gui;
 import com.cavetale.enderball.util.Json;
 import java.io.File;
 import java.util.ArrayList;
@@ -28,10 +29,12 @@ public final class EnderballPlugin extends JavaPlugin {
                            Json.load(boardFile, GameBoard.class, GameBoard::new),
                            Json.load(stateFile, GameState.class, GameState::new)));
         games.get(0).enable();
+        Gui.enable(this);
     }
 
     @Override
     public void onDisable() {
+        Gui.disable(this);
         games.get(0).disable();
         games.clear();
     }

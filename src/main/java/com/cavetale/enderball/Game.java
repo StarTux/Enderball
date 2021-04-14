@@ -3,14 +3,18 @@ package com.cavetale.enderball;
 import com.cavetale.enderball.struct.Cuboid;
 import com.cavetale.enderball.struct.Vec3i;
 import com.cavetale.enderball.util.Fireworks;
+import com.cavetale.enderball.util.Gui;
 import com.cavetale.enderball.util.Items;
 import com.cavetale.enderball.util.Json;
 import com.destroystokyo.paper.Title;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import lombok.Getter;
@@ -63,6 +67,7 @@ public final class Game {
     private int hungerTicks = 0;
     private int fireworkTicks = 0;
     private List<ItemStack> teamFlagItems = new ArrayList<>();
+    private final Map<UUID, Nation> nationVotes = new HashMap<>();
 
     public void enable() {
         board.prep();
@@ -99,6 +104,7 @@ public final class Game {
         state.getScores().set(0, 0);
         state.getScores().set(1, 0);
         state.getTeams().clear();
+        state.setNations(new ArrayList<>());
         state.setPhase(GamePhase.IDLE);
         removeAllBalls();
     }
@@ -140,6 +146,10 @@ public final class Game {
 
     GameTeam getTeam(Player player) {
         return state.getTeams().get(player.getUniqueId());
+    }
+
+    GameTeam getTeam(UUID uuid) {
+        return state.getTeams().get(uuid);
     }
 
     public void onKickBall(Player player, Block block, PlayerInteractEvent event) {
@@ -349,20 +359,47 @@ public final class Game {
         return list;
     }
 
+    public List<Player> getTeamPlayers(GameTeam team) {
+        List<Player> list = new ArrayList<>();
+        for (Map.Entry<UUID, GameTeam> entry : state.getTeams().entrySet()) {
+            if (entry.getValue() != team) continue;
+            Player player = Bukkit.getPlayer(entry.getKey());
+            if (player != null) list.add(player);
+        }
+        return list;
+    }
+
     public void warpOutside(Player player) {
         player.teleport(board.getOutside().toLocation(getWorld()), TeleportCause.PLUGIN);
     }
 
     void makeFlags() {
         List<Nation> nations = new ArrayList<>(Arrays.asList(Nation.values()));
-        Collections.shuffle(nations);
-        Nation redNation = nations.get(0);
-        Nation blueNation = nations.get(1);
-        List<Nation> teamNations = Arrays.asList(redNation, blueNation);
-        state.setNations(teamNations);
+        state.setNations(new ArrayList<>());
+        for (GameTeam team : GameTeam.values()) {
+            Map<Nation, Integer> nationScores = new EnumMap<>(Nation.class);
+            for (Nation nation : nations) {
+                nationScores.put(nation, countNationVotes(nation, team));
+            }
+            Collections.sort(nations, (b, a) -> Integer.compare(nationScores.get(a), nationScores.get(b)));
+            // Pick one random nation among the ones with max score.
+            Nation nation = nations.get(0);
+            final int score = nationScores.get(nation);
+            for (int i = 1; i < nations.size(); i += 1) {
+                Nation nation2 = nations.get(i);
+                int score2 = nationScores.get(nation2);
+                if (score != score2) break;
+                if (random.nextInt(i + 1) == 0) nation = nation2;
+            }
+            nations.remove(nation);
+            state.getNations().add(nation);
+            for (Player player : getTeamPlayers(team)) {
+                player.sendMessage(team.chatColor + "Your team flag is " + nation.name);
+            }
+        }
         teamFlagItems.clear();
-        teamFlagItems.add(redNation.makeTeamFlag(GameTeam.RED));
-        teamFlagItems.add(blueNation.makeTeamFlag(GameTeam.BLUE));
+        teamFlagItems.add(state.getNations().get(0).makeTeamFlag(GameTeam.RED));
+        teamFlagItems.add(state.getNations().get(1).makeTeamFlag(GameTeam.BLUE));
         // WARNING: Assumes board along z axis!
         int centerZ = board.getArea().getCenter().getZ();
         for (Chunk chunk : getWorld().getLoadedChunks()) {
@@ -426,7 +463,6 @@ public final class Game {
             GameTeam team = getTeam(player);
             player.sendMessage("You play for team " + team.chatColor + getTeamName(team));
             plugin.getLogger().info(player.getName() + " plays on team " + getTeamName(team));
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
         }
         Location spawn = board.getKickoff().toLocation(getWorld());
         for (int i = 0; i < 2; i += 1) {
@@ -449,20 +485,35 @@ public final class Game {
     }
 
     public void newPhase(GamePhase phase) {
+        setupPhase(phase);
+        saveState();
+    }
+
+    void setupPhase(GamePhase phase) {
         state.setPhase(phase);
         switch (phase) {
         case IDLE:
             break;
-        case PLAYERS: {
+        case TEAMS:
             resetGame();
-            makeFlags();
             makeTeams();
+            setupPhase(GamePhase.PICK_FLAG);
+            break;
+        case PICK_FLAG:
+            bossBar.setTitle(ChatColor.GREEN + "Pick a Nation");
+            nationVotes.clear();
+            state.setPickFlagStarted(System.currentTimeMillis());
+            break;
+        case PLAYERS: {
+            makeFlags();
             for (Player player : getPresentPlayers()) {
-                dress(player, getTeam(player));
+                GameTeam team = getTeam(player);
+                if (team == null) continue;
+                dress(player, team);
             }
             state.setKickoffTeam(random.nextInt(2));
             state.setGameStarted(System.currentTimeMillis());
-            newPhase(GamePhase.KICKOFF);
+            setupPhase(GamePhase.KICKOFF);
             break;
         }
         case KICKOFF: {
@@ -493,6 +544,7 @@ public final class Game {
             for (Player player : getWorld().getPlayers()) {
                 if (getTeam(player) != null) {
                     player.getInventory().clear();
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
                 }
             }
             removeAllBalls();
@@ -521,6 +573,7 @@ public final class Game {
             for (Player target : getPresentPlayers()) {
                 target.sendMessage(text);
                 target.sendTitle(new Title(title, getScoreString(), 20, 60, 20));
+                target.playSound(target.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, SoundCategory.MASTER, 0.5f, 1.5f);
             }
             bossBar.setTitle(title);
             break;
@@ -528,7 +581,6 @@ public final class Game {
         default:
             break;
         }
-        saveState();
     }
 
     void tick() {
@@ -537,6 +589,33 @@ public final class Game {
         }
         switch (state.getPhase()) {
         case IDLE: return;
+        case PICK_FLAG: {
+            long total = 30000;
+            long timeLeft = timeLeft(state.getPickFlagStarted(), total);
+            bossBar.setProgress(clamp1((double) timeLeft / (double) total));
+            int playerCount = state.getTeams().size();
+            int votesCast = nationVotes.size();
+            if (timeLeft <= 0 || votesCast >= playerCount) {
+                for (Player player : getEligiblePlayers()) {
+                    GameTeam team = getTeam(player);
+                    if (team == null) continue;
+                    player.closeInventory();
+                }
+                newPhase(GamePhase.PLAYERS);
+            } else {
+                for (Player player : getEligiblePlayers()) {
+                    GameTeam team = getTeam(player);
+                    if (team == null) continue;
+                    if (nationVotes.get(player.getUniqueId()) == null) {
+                        Gui gui = Gui.of(player);
+                        if (gui == null) {
+                            openNationGui(player, team);
+                        }
+                    }
+                }
+            }
+            break;
+        }
         case KICKOFF: {
             long total = 10000;
             long timeLeft = timeLeft(state.getKickoffStarted(), total);
@@ -588,7 +667,6 @@ public final class Game {
                     int y = field.getMin().y;
                     Fireworks.spawnFirework(new Vec3i(x, y, z).toLocation(getWorld()));
                 }
-
             }
             break;
         }
@@ -598,11 +676,64 @@ public final class Game {
             if (timeLeft <= 0) {
                 newPhase(GamePhase.PLAYERS);
             } else {
+                if ((fireworkTicks++ % 10) == 0) {
+                    Cuboid field = board.getField();
+                    int x = field.getMin().x + random.nextInt(field.getMax().x - field.getMin().x + 1);
+                    int z = field.getMin().z + random.nextInt(field.getMax().z - field.getMin().z + 1);
+                    int y = field.getMin().y;
+                    Fireworks.spawnFirework(new Vec3i(x, y, z).toLocation(getWorld()));
+                }
                 bossBar.setProgress(clamp1((double) timeLeft / (double) total));
             }
             break;
         }
         default: break;
+        }
+    }
+
+    Gui openNationGui(Player player, GameTeam team) {
+        int rows = (Nation.values().length - 1) / 9 + 1;
+        int size = rows * 9;
+        Gui gui = new Gui(plugin).size(size).title("Nation Vote");
+        updateNationGui(player, gui, team);
+        gui.open(player);
+        return gui;
+    }
+
+    int countNationVotes(Nation nation, GameTeam team) {
+        if (nationVotes == null) return 0;
+        int result = 0;
+        for (Map.Entry<UUID, Nation> entry : nationVotes.entrySet()) {
+            if (entry.getValue() == nation && getTeam(entry.getKey()) == team) {
+                result += 1;
+            }
+        }
+        return result;
+    }
+
+    void updateNationGui(Player player) {
+        Gui gui = Gui.of(player);
+        if (gui == null) return;
+        GameTeam team = getTeam(player);
+        if (team == null) return;
+        updateNationGui(player, gui, team);
+    }
+
+    void updateNationGui(Player player, Gui gui, GameTeam team) {
+        int i = 0;
+        for (Nation nation : Nation.values()) {
+            int slot = i++;
+            int votes = countNationVotes(nation, team);
+            ItemStack item = nation.makeTeamFlag(team);
+            item.setAmount(1 + votes);
+            gui.setItem(slot, item, click -> {
+                    if (state.getPhase() != GamePhase.PICK_FLAG) return;
+                    nationVotes.put(player.getUniqueId(), nation);
+                    for (Player target : getEligiblePlayers()) {
+                        updateNationGui(target);
+                    }
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1.0f, 1.0f);
+                });
         }
     }
 

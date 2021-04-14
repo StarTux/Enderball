@@ -711,30 +711,27 @@ public final class Game {
         return result;
     }
 
-    void updateNationGui(Player player) {
-        Gui gui = Gui.of(player);
-        if (gui == null) return;
-        GameTeam team = getTeam(player);
-        if (team == null) return;
-        updateNationGui(player, gui, team);
+    void updateNationGui(Player player, Gui gui, GameTeam team) {
+        for (Nation nation : Nation.values()) {
+            updateNationGui(player, gui, team, nation);
+        }
     }
 
-    void updateNationGui(Player player, Gui gui, GameTeam team) {
-        int i = 0;
-        for (Nation nation : Nation.values()) {
-            int slot = i++;
-            int votes = countNationVotes(nation, team);
-            ItemStack item = nation.makeTeamFlag(team);
-            item.setAmount(1 + votes);
-            gui.setItem(slot, item, click -> {
-                    if (state.getPhase() != GamePhase.PICK_FLAG) return;
-                    nationVotes.put(player.getUniqueId(), nation);
-                    for (Player target : getEligiblePlayers()) {
-                        updateNationGui(target);
-                    }
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1.0f, 1.0f);
-                });
-        }
+    void updateNationGui(Player player, Gui gui, GameTeam team, Nation nation) {
+        int slot = nation.ordinal();
+        int votes = countNationVotes(nation, team);
+        ItemStack item = nation.makeTeamFlag(team);
+        item.setAmount(1 + votes);
+        gui.setItem(slot, item, click -> {
+                if (state.getPhase() != GamePhase.PICK_FLAG) return;
+                nationVotes.put(player.getUniqueId(), nation);
+                for (Player target : getTeamPlayers(team)) {
+                    Gui gui2 = Gui.of(target);
+                    if (gui2 == null) return;
+                    updateNationGui(target, gui2, team, nation);
+                }
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1.0f, 1.0f);
+            });
     }
 
     void dress(Player player, GameTeam team) {

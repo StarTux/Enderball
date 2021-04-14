@@ -742,25 +742,21 @@ public final class Game {
 
     void updateNationGui(Player player, Gui gui, GameTeam team) {
         for (Nation nation : Nation.values()) {
-            updateNationGui(player, gui, team, nation);
+            int slot = nation.ordinal();
+            int votes = countNationVotes(nation, team);
+            ItemStack item = nation.makeTeamFlag(team);
+            item.setAmount(1 + votes);
+            gui.setItem(slot, item, click -> {
+                    if (state.getPhase() != GamePhase.PICK_FLAG) return;
+                    nationVotes.put(player.getUniqueId(), nation);
+                    for (Player target : getTeamPlayers(team)) {
+                        Gui gui2 = Gui.of(target);
+                        if (gui2 == null) return;
+                        updateNationGui(target, gui2, team);
+                    }
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1.0f, 1.0f);
+                });
         }
-    }
-
-    void updateNationGui(Player player, Gui gui, GameTeam team, Nation nation) {
-        int slot = nation.ordinal();
-        int votes = countNationVotes(nation, team);
-        ItemStack item = nation.makeTeamFlag(team);
-        item.setAmount(1 + votes);
-        gui.setItem(slot, item, click -> {
-                if (state.getPhase() != GamePhase.PICK_FLAG) return;
-                nationVotes.put(player.getUniqueId(), nation);
-                for (Player target : getTeamPlayers(team)) {
-                    Gui gui2 = Gui.of(target);
-                    if (gui2 == null) return;
-                    updateNationGui(target, gui2, team, nation);
-                }
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1.0f, 1.0f);
-            });
     }
 
     void dress(Player player, GameTeam team) {

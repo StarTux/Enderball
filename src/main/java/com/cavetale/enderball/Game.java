@@ -5,6 +5,7 @@ import com.cavetale.enderball.struct.Vec3i;
 import com.cavetale.enderball.util.Fireworks;
 import com.cavetale.enderball.util.Gui;
 import com.cavetale.enderball.util.Json;
+import com.cavetale.mytems.Mytems;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import java.time.Duration;
@@ -106,8 +107,10 @@ public final class Game {
         state.getScores().set(1, 0);
         state.getTeams().clear();
         state.setNations(new ArrayList<>());
-        state.setPhase(GamePhase.IDLE);
         removeAllBalls();
+        for (Player player : getPresentPlayers()) {
+            player.getInventory().clear();
+        }
     }
 
     GameBall getBall(Block block) {
@@ -495,6 +498,7 @@ public final class Game {
         switch (phase) {
         case IDLE:
             bossBar.name(Component.text("Paused", NamedTextColor.GRAY));
+            bossBar.progress(1.0f);
             resetGame();
             break;
         case WAIT_FOR_PLAYERS:
@@ -777,6 +781,7 @@ public final class Game {
         player.getInventory().setChestplate(dye(Material.LEATHER_CHESTPLATE, team));
         player.getInventory().setLeggings(dye(Material.LEATHER_LEGGINGS, team));
         player.getInventory().setBoots(dye(Material.LEATHER_BOOTS, team));
+        player.getInventory().setItemInOffHand(Mytems.MAGIC_MAP.createItemStack(player));
     }
 
     ItemStack dye(Material mat, GameTeam team) {

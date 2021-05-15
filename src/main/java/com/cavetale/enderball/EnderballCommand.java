@@ -100,7 +100,7 @@ public final class EnderballCommand implements TabExecutor {
     }
 
     boolean reset(CommandSender sender, String[] args) {
-        plugin.getGame().resetGame();
+        plugin.getGame().newPhase(GamePhase.IDLE);
         plugin.getGame().saveState();
         sender.sendMessage("Game reset");
         return true;

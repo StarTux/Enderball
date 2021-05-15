@@ -3,6 +3,7 @@ package com.cavetale.enderball;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.FallingBlock;
@@ -35,6 +36,7 @@ public final class EventListener implements Listener {
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     void onPlayerQuit(PlayerQuitEvent event) {
+        event.getPlayer().getInventory().clear();
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
@@ -64,8 +66,10 @@ public final class EventListener implements Listener {
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
     void onPlayerInteract(PlayerInteractEvent event) {
         final Player player = event.getPlayer();
+        if (player.getGameMode() == GameMode.CREATIVE) return;
         switch (event.getAction()) {
         case LEFT_CLICK_BLOCK:
+            event.setCancelled(true);
         case RIGHT_CLICK_BLOCK:
             break;
         default:
@@ -96,7 +100,12 @@ public final class EventListener implements Listener {
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
     void onBlockPlace(BlockPlaceEvent event) {
         Block block = event.getBlock();
-        if (block.getType() != Material.DRAGON_EGG) return;
+        if (block.getType() != Material.DRAGON_EGG) {
+            if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+                event.setCancelled(true);
+            }
+            return;
+        }
         Game game = plugin.getGameAt(block);
         game.onPlaceBall(event.getPlayer(), block);
     }

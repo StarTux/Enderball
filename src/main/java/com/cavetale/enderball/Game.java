@@ -4,11 +4,10 @@ import com.cavetale.enderball.struct.Cuboid;
 import com.cavetale.enderball.struct.Vec3i;
 import com.cavetale.enderball.util.Fireworks;
 import com.cavetale.enderball.util.Gui;
-import com.cavetale.enderball.util.Items;
 import com.cavetale.enderball.util.Json;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
-import com.destroystokyo.paper.Title;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,6 +20,11 @@ import java.util.Random;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.bossbar.BossBar;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.title.Title;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -38,9 +42,6 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.Rotatable;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
@@ -50,7 +51,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
@@ -68,26 +68,25 @@ public final class Game {
     private BossBar bossBar;
     private int hungerTicks = 0;
     private int fireworkTicks = 0;
-    private List<ItemStack> teamFlagItems = new ArrayList<>();
     private final Map<UUID, Nation> nationVotes = new HashMap<>();
 
     public void enable() {
         board.prep();
         state.prep();
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
-        bossBar = Bukkit.createBossBar("Enderball", BarColor.GREEN, BarStyle.SOLID);
-        bossBar.setVisible(true);
-        if (state.getNations().size() == 2) {
-            teamFlagItems.clear();
-            teamFlagItems.add(state.getNations().get(0).makeTeamFlag(GameTeam.RED));
-            teamFlagItems.add(state.getNations().get(1).makeTeamFlag(GameTeam.BLUE));
+        bossBar = BossBar.bossBar(Component.text("Enderball"), 1.0f,
+                                  BossBar.Color.GREEN, BossBar.Overlay.PROGRESS);
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.showBossBar(bossBar);
         }
     }
 
     public void disable() {
         saveState();
         task.cancel();
-        bossBar.removeAll();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.hideBossBar(bossBar);
+        }
     }
 
     public void saveBoard() {
@@ -289,11 +288,15 @@ public final class Game {
         state.getBalls().remove(gameBall);
     }
 
-    public String getScoreString() {
-        return ""
-            + GameTeam.RED.chatColor + getTeamName(GameTeam.RED) + " " + state.getScores().get(0)
-            + ChatColor.WHITE + " : "
-            + GameTeam.BLUE.chatColor + state.getScores().get(1) + " " + getTeamName(GameTeam.BLUE);
+    public Component getScoreComponent() {
+        Nation a = getTeamNation(GameTeam.RED);
+        Nation b = getTeamNation(GameTeam.BLUE);
+        TextColor white = NamedTextColor.WHITE;
+        return Component.text()
+            .append(Component.text(a.name, white)).append(a.component).append(Component.space())
+            .append(Component.text(state.getScores().get(0) + " : " + state.getScores().get(1)))
+            .append(Component.space()).append(b.component).append(Component.text(b.name, white))
+            .build();
     }
 
     void scoreGoal(GameTeam goal, GameBall gameBall) {
@@ -303,8 +306,8 @@ public final class Game {
         int index = team.toIndex();
         state.getScores().set(index, state.getScores().get(index) + 1);
         Player player = gameBall.getLastKickerPlayer();
-        String title = team.chatColor + "Goal!";
-        String subtitle = getScoreString();
+        Component title = Component.text("Goal!", team.textColor);
+        Component subtitle = getScoreComponent();
         String chat;
         if (player != null) {
             GameTeam playerTeam = getTeam(player);
@@ -316,13 +319,13 @@ public final class Game {
         } else {
             chat = "Goal for " + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
         }
-        Title theTitle = new Title(title, subtitle, 0, 20, 0);
+        Title theTitle = Title.title(title, subtitle, Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO));
         for (Player target : getPresentPlayers()) {
             target.sendMessage(chat);
-            target.sendTitle(theTitle);
+            target.showTitle(theTitle);
         }
         plugin.getLogger().info("Goal for " + team + ": " + (player != null ? player.getName() : "null"));
-        bossBar.setTitle(chat);
+        bossBar.name(Component.text(chat));
         state.setKickoffTeam(goal.toIndex());
         if (Math.abs(getScore(GameTeam.RED) - getScore(GameTeam.BLUE)) >= 3) {
             newPhase(GamePhase.END);
@@ -393,13 +396,14 @@ public final class Game {
             nations.remove(nation);
             state.getNations().add(nation);
             for (Player player : getTeamPlayers(team)) {
-                player.sendMessage(team.chatColor + "Your team flag is " + nation.name);
-                player.sendTitle(new Title("", team.chatColor + nation.name, 10, 20, 10));
+                player.sendMessage(Component.text()
+                                   .append(Component.text("Your team flag is ", team.textColor))
+                                   .append(nation.component).append(Component.text(nation.name, team.textColor))
+                                   .build());
+                player.showTitle(Title.title(Component.empty(),
+                                             Component.text(nation.name, team.textColor)));
             }
         }
-        teamFlagItems.clear();
-        teamFlagItems.add(state.getNations().get(0).makeTeamFlag(GameTeam.RED));
-        teamFlagItems.add(state.getNations().get(1).makeTeamFlag(GameTeam.BLUE));
         // WARNING: Assumes board along z axis!
         int centerZ = board.getArea().getCenter().getZ();
         for (Chunk chunk : getWorld().getLoadedChunks()) {
@@ -411,11 +415,9 @@ public final class Game {
                 if (!board.getArea().contains(block)) continue;
                 if (blockState instanceof Banner) {
                     Banner oldBanner = (Banner) blockState;
-                    ItemStack itemStack = blockState.getZ() < centerZ
-                        ? teamFlagItems.get(0)
-                        : teamFlagItems.get(1);
-                    DyeColor baseColor = Items.getDyeColor(itemStack.getType());
-                    if (baseColor == null) baseColor = DyeColor.BLACK;
+                    int teamIndex = blockState.getZ() < centerZ ? 0 : 1;
+                    Nation nation = state.getNations().get(teamIndex);
+                    DyeColor baseColor = nation.bannerDyeColor;
                     Material mat;
                     try {
                         mat = block.getType().name().endsWith("WALL_BANNER")
@@ -438,9 +440,8 @@ public final class Game {
                     } else {
                         block.setType(mat);
                     }
-                    BannerMeta meta = (BannerMeta) itemStack.getItemMeta();
                     Banner banner = (Banner) block.getState();
-                    banner.setPatterns(meta.getPatterns());
+                    banner.setPatterns(nation.bannerPatterns);
                     banner.update();
                 }
             }
@@ -493,12 +494,12 @@ public final class Game {
         state.setPhase(phase);
         switch (phase) {
         case IDLE:
-            bossBar.setTitle(ChatColor.GRAY + "Paused");
+            bossBar.name(Component.text("Paused", NamedTextColor.GRAY));
             resetGame();
             break;
         case WAIT_FOR_PLAYERS:
             removeAllBalls();
-            bossBar.setTitle(ChatColor.GRAY + "Preparing the Game");
+            bossBar.name(Component.text("Preparing the Game", NamedTextColor.GRAY));
             state.setWaitForPlayersStarted(System.currentTimeMillis());
             break;
         case TEAMS:
@@ -506,7 +507,7 @@ public final class Game {
             setupPhase(GamePhase.PICK_FLAG);
             break;
         case PICK_FLAG:
-            bossBar.setTitle(ChatColor.GREEN + "Pick a Nation");
+            bossBar.name(Component.text("Pick a Nation", NamedTextColor.GREEN));
             nationVotes.clear();
             state.setPickFlagStarted(System.currentTimeMillis());
             break;
@@ -524,12 +525,18 @@ public final class Game {
         }
         case KICKOFF: {
             GameTeam team = GameTeam.of(state.getKickoffTeam());
-            String txt = "Kickoff for " + team.chatColor + getTeamName(team);
+            Nation nation = getTeamNation(team);
+            Component txt = Component.text()
+                .append(Component.text("Kickoff for ", NamedTextColor.WHITE))
+                .append(nation.component).append(Component.text(nation.name, team.textColor))
+                .build();
+            Title title = Title.title(Component.empty(), txt,
+                                      Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO));
             for (Player player : getPresentPlayers()) {
-                player.sendTitle(new Title("", txt, 0, 20, 0));
+                player.showTitle(title);
             }
             state.setKickoffStarted(System.currentTimeMillis());
-            bossBar.setTitle(txt);
+            bossBar.name(txt);
             if (state.getBalls().isEmpty()) {
                 Block block = board.getKickoff().toBlock(getWorld());
                 block.setType(Material.DRAGON_EGG, false);
@@ -540,7 +547,7 @@ public final class Game {
             break;
         }
         case PLAY: {
-            bossBar.setTitle(getScoreString());
+            bossBar.name(getScoreComponent());
             break;
         }
         case GOAL:
@@ -566,22 +573,28 @@ public final class Game {
                 winnerTeam = null;
             }
             String text;
-            String title;
+            Component title;
             if (winnerTeam != null) {
                 text = "Team " + winnerTeam.chatColor + getTeamName(winnerTeam) + ChatColor.RESET + " wins!";
-                title = "" + winnerTeam.chatColor + getTeamName(winnerTeam) + " Wins!";
+                Nation nation = getTeamNation(winnerTeam);
+                title = Component.text().append(nation.component)
+                    .append(Component.text(nation.name, winnerTeam.textColor))
+                    .append(Component.text(" Wins!", NamedTextColor.WHITE))
+                    .build();
                 plugin.getLogger().info("Winner: " + getTeamName(winnerTeam));
             } else {
                 text = "It's a draw!";
-                title = ChatColor.GRAY + "Draw";
+                title = Component.text("Draw", NamedTextColor.GRAY);
                 plugin.getLogger().info("Winner: Draw");
             }
+            Title theTitle = Title.title(title, getScoreComponent(),
+                                         Title.Times.of(Duration.ofSeconds(1), Duration.ofSeconds(3), Duration.ofSeconds(1)));
             for (Player target : getPresentPlayers()) {
                 target.sendMessage(text);
-                target.sendTitle(new Title(title, getScoreString(), 20, 60, 20));
+                target.showTitle(theTitle);
                 target.playSound(target.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, SoundCategory.MASTER, 0.5f, 1.5f);
             }
-            bossBar.setTitle(title);
+            bossBar.name(title);
             break;
         }
         default:
@@ -590,9 +603,6 @@ public final class Game {
     }
 
     void tick() {
-        for (Player player : getPresentPlayers()) {
-            bossBar.addPlayer(player);
-        }
         switch (state.getPhase()) {
         case IDLE: return;
         case WAIT_FOR_PLAYERS: {
@@ -606,14 +616,14 @@ public final class Game {
             if (timeLeft <= 0) {
                 newPhase(GamePhase.TEAMS);
             } else {
-                bossBar.setProgress(clamp1((double) timeLeft / (double) total));
+                bossBar.progress(clamp1((float) timeLeft / (float) total));
             }
             break;
         }
         case PICK_FLAG: {
             long total = 30000;
             long timeLeft = timeLeft(state.getPickFlagStarted(), total);
-            bossBar.setProgress(clamp1((double) timeLeft / (double) total));
+            bossBar.progress(clamp1((float) timeLeft / (float) total));
             int playerCount = state.getTeams().size();
             int votesCast = nationVotes.size();
             if (timeLeft <= 0 || votesCast >= playerCount) {
@@ -643,7 +653,7 @@ public final class Game {
             if (timeLeft <= 0) {
                 newPhase(GamePhase.PLAY);
             } else {
-                bossBar.setProgress(clamp1((double) timeLeft / (double) total));
+                bossBar.progress(clamp1((float) timeLeft / (float) total));
             }
             break;
         }
@@ -660,7 +670,7 @@ public final class Game {
             if (timeLeft <= 0) {
                 newPhase(GamePhase.END);
             } else {
-                bossBar.setProgress(clamp1((double) timeLeft / (double) total));
+                bossBar.progress(clamp1((float) timeLeft / (float) total));
             }
             for (GameBall ball : state.getBalls()) {
                 if (ball.isEntity()) {
@@ -687,7 +697,7 @@ public final class Game {
             if (timeLeft <= 0) {
                 newPhase(GamePhase.KICKOFF);
             } else {
-                bossBar.setProgress(clamp1((double) timeLeft / (double) total));
+                bossBar.progress(clamp1((float) timeLeft / (float) total));
                 if ((fireworkTicks++ % 10) == 0) {
                     Cuboid field = board.getField();
                     int x = field.getMin().x + random.nextInt(field.getMax().x - field.getMin().x + 1);
@@ -712,7 +722,7 @@ public final class Game {
                     int y = field.getMin().y;
                     Fireworks.spawnFirework(new Vec3i(x, y, z).toLocation(getWorld()));
                 }
-                bossBar.setProgress(clamp1((double) timeLeft / (double) total));
+                bossBar.progress(clamp1((float) timeLeft / (float) total));
             }
             break;
         }
@@ -744,7 +754,7 @@ public final class Game {
         for (Nation nation : Nation.values()) {
             int slot = nation.ordinal();
             int votes = countNationVotes(nation, team);
-            ItemStack item = nation.makeTeamFlag(team);
+            ItemStack item = nation.bannerItem.clone();
             item.setAmount(1 + votes);
             gui.setItem(slot, item, click -> {
                     if (state.getPhase() != GamePhase.PICK_FLAG) return;
@@ -762,8 +772,8 @@ public final class Game {
     void dress(Player player, GameTeam team) {
         player.getInventory().clear();
         if (team == null) return;
-        //player.getInventory().setHelmet(dye(Material.LEATHER_HELMET, team));
-        player.getInventory().setHelmet(teamFlagItems.get(team.ordinal()).clone());
+        ItemStack helmet = state.getNations().get(team.ordinal()).bannerItem.clone();
+        player.getInventory().setHelmet(helmet);
         player.getInventory().setChestplate(dye(Material.LEATHER_CHESTPLATE, team));
         player.getInventory().setLeggings(dye(Material.LEATHER_LEGGINGS, team));
         player.getInventory().setBoots(dye(Material.LEATHER_BOOTS, team));
@@ -780,6 +790,7 @@ public final class Game {
     }
 
     public void onJoin(Player player) {
+        player.showBossBar(bossBar);
         dress(player, getTeam(player));
     }
 
@@ -791,8 +802,12 @@ public final class Game {
         return state.getScores().get(team.toIndex());
     }
 
-    double clamp1(double in) {
+    float clamp1(float in) {
         return Math.max(0, Math.min(1, in));
+    }
+
+    public Nation getTeamNation(GameTeam team) {
+        return state.getNations().get(team.ordinal());
     }
 
     public String getTeamName(GameTeam team) {
@@ -821,7 +836,7 @@ public final class Game {
                 ChatColor.GRAY + "Stand on the playing",
                 ChatColor.GRAY + "field to join."
             };
-            event.addLines(plugin, Priority.DEFAULT, lines);
+            event.addLines(plugin, Priority.HIGHEST, lines);
             break;
         }
         case PICK_FLAG: {
@@ -839,7 +854,7 @@ public final class Game {
                 }
             }
             if (sb.length() > 0) lines.add(sb.toString());
-            event.addLines(plugin, Priority.DEFAULT, lines);
+            event.addLines(plugin, Priority.HIGHEST, lines);
             break;
         }
         case KICKOFF: case PLAY: case GOAL: {
@@ -855,7 +870,7 @@ public final class Game {
                 ChatColor.GRAY + "Right Click Falling Ball",
                 ChatColor.WHITE + "  Body Block",
             };
-            event.addLines(plugin, Priority.DEFAULT, lines);
+            event.addLines(plugin, Priority.HIGHEST, lines);
             break;
         }
         default: break;

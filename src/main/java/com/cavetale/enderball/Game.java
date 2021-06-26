@@ -55,6 +55,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
+import com.cavetale.core.font.DefaultFont;
 
 /**
  * Runtime class of one game.
@@ -317,7 +318,7 @@ public final class Game {
             chat = player.getName() + " scored a " + (team == playerTeam ? "goal" : "own goal") + " for "
                 + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
             if (playerTeam == team) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Fußball");
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Fußball Striker Goal");
             }
         } else {
             chat = "Goal for " + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
@@ -737,7 +738,12 @@ public final class Game {
     Gui openNationGui(Player player, GameTeam team) {
         int rows = (Nation.values().length - 1) / 9 + 1;
         int size = rows * 9;
-        Gui gui = new Gui(plugin).size(size).title("Nation Vote");
+        Gui gui = new Gui(plugin)
+            .size(size)
+            .title(Component.text()
+                   .append(DefaultFont.guiBlankOverlay(size, TextColor.color(0xFFFFFF)))
+                   .append(Component.text("Nation Vote", TextColor.color(0x000000)))
+                   .build());
         updateNationGui(player, gui, team);
         gui.open(player);
         return gui;
@@ -763,11 +769,13 @@ public final class Game {
             gui.setItem(slot, item, click -> {
                     if (state.getPhase() != GamePhase.PICK_FLAG) return;
                     nationVotes.put(player.getUniqueId(), nation);
-                    for (Player target : getTeamPlayers(team)) {
-                        Gui gui2 = Gui.of(target);
-                        if (gui2 == null) return;
-                        updateNationGui(target, gui2, team);
-                    }
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                            for (Player target : getTeamPlayers(team)) {
+                                Gui gui2 = Gui.of(target);
+                                if (gui2 == null) return;
+                                updateNationGui(target, gui2, team);
+                            }
+                        });
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1.0f, 1.0f);
                 });
         }

@@ -879,8 +879,8 @@ public final class Game {
         }
         case KICKOFF: case PLAY: case GOAL: {
             GameTeam team = getTeam(player);
-            Nation nation = getTeamNation(team);
             if (team == null) return;
+            Nation nation = getTeamNation(team);
             Component[] lines = {
                 (Component.text().content("Your team ").color(NamedTextColor.GRAY)
                  .append(nation.component)

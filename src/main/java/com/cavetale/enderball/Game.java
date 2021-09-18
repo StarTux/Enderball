@@ -677,7 +677,7 @@ public final class Game {
                 }
                 if (ballZoneAction(gameBall)) return;
             }
-            long total = 60L * 10L * 1000L;
+            long total = 60L * 15L * 1000L;
             long timeLeft = timeLeft(state.getGameStarted(), total);
             if (timeLeft <= 0) {
                 newPhase(GamePhase.END);

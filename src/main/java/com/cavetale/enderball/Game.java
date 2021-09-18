@@ -744,10 +744,8 @@ public final class Game {
         int size = rows * 9;
         Gui gui = new Gui(plugin)
             .size(size)
-            .title(Component.text()
-                   .append(DefaultFont.guiBlankOverlay(size, TextColor.color(0xFFFFFF)))
-                   .append(Component.text("Nation Vote", TextColor.color(0x000000)))
-                   .build());
+            .title(DefaultFont.guiBlankOverlay(size, NamedTextColor.BLACK,
+                                               Component.text("Nation Vote", NamedTextColor.WHITE)));
         updateNationGui(player, gui, team);
         gui.open(player);
         return gui;

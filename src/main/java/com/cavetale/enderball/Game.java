@@ -769,7 +769,7 @@ public final class Game {
             int slot = nation.ordinal();
             int votes = countNationVotes(nation, team);
             ItemStack item = nation.bannerItem.clone();
-            item.setAmount(1 + votes);
+            item.setAmount(Math.max(1, Math.min(64, votes)));
             gui.setItem(slot, item, click -> {
                     if (state.getPhase() != GamePhase.PICK_FLAG) return;
                     nationVotes.put(player.getUniqueId(), nation);
@@ -778,6 +778,7 @@ public final class Game {
                                 Gui gui2 = Gui.of(target);
                                 if (gui2 == null) return;
                                 updateNationGui(target, gui2, team);
+                                target.updateInventory();
                             }
                         });
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1.0f, 1.0f);

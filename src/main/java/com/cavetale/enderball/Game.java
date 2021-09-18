@@ -1,5 +1,6 @@
 package com.cavetale.enderball;
 
+import com.cavetale.core.font.DefaultFont;
 import com.cavetale.enderball.struct.Cuboid;
 import com.cavetale.enderball.struct.Vec3i;
 import com.cavetale.enderball.util.Fireworks;
@@ -8,6 +9,7 @@ import com.cavetale.enderball.util.Json;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
+import com.winthier.title.TitlePlugin;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,6 +39,7 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Banner;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -55,7 +58,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
-import com.cavetale.core.font.DefaultFont;
 
 /**
  * Runtime class of one game.
@@ -111,6 +113,7 @@ public final class Game {
         removeAllBalls();
         for (Player player : getPresentPlayers()) {
             player.getInventory().clear();
+            TitlePlugin.getInstance().setColor(player, null);
         }
     }
 
@@ -482,7 +485,7 @@ public final class Game {
                 location.setDirection(lookAt);
                 player.teleport(location, TeleportCause.PLUGIN);
                 player.setGameMode(GameMode.SURVIVAL);
-                player.setHealth(player.getMaxHealth());
+                player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
                 player.setFoodLevel(20);
                 player.setSaturation(20.0f);
             }
@@ -562,6 +565,7 @@ public final class Game {
             for (Player player : getWorld().getPlayers()) {
                 if (getTeam(player) != null) {
                     player.getInventory().clear();
+                    TitlePlugin.getInstance().setColor(player, null);
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
                 }
             }
@@ -790,13 +794,14 @@ public final class Game {
         player.getInventory().setLeggings(dye(Material.LEATHER_LEGGINGS, team));
         player.getInventory().setBoots(dye(Material.LEATHER_BOOTS, team));
         player.getInventory().setItemInOffHand(Mytems.MAGIC_MAP.createItemStack(player));
+        TitlePlugin.getInstance().setColor(player, team.textColor);
     }
 
     ItemStack dye(Material mat, GameTeam team) {
         ItemStack item = new ItemStack(mat);
         LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
         meta.setColor(team.dyeColor.getColor());
-        meta.setDisplayName(team.chatColor + getTeamName(team));
+        meta.displayName(Component.text(getTeamName(team), team.textColor));
         meta.addItemFlags(ItemFlag.values());
         item.setItemMeta(meta);
         return item;
@@ -844,46 +849,46 @@ public final class Game {
         if (player.getGameMode() == GameMode.SPECTATOR) return;
         switch (state.getPhase()) {
         case WAIT_FOR_PLAYERS: {
-            String[] lines = {
-                ChatColor.GREEN + "Game starting soon!",
-                ChatColor.GRAY + "Stand on the playing",
-                ChatColor.GRAY + "field to join."
+            Component[] lines = {
+                Component.text("Game starting soon!", NamedTextColor.GREEN),
+                Component.text("Stand on the playing", NamedTextColor.GRAY),
+                Component.text("field to join.", NamedTextColor.GRAY),
             };
-            event.addLines(plugin, Priority.HIGHEST, lines);
+            event.add(plugin, Priority.HIGHEST, lines);
             break;
         }
         case PICK_FLAG: {
             GameTeam team = getTeam(player);
             if (team == null) return;
             StringBuilder sb = new StringBuilder(team.chatColor + "Your team:" + ChatColor.WHITE);
-            List<String> lines = new ArrayList<>();
+            List<Component> lines = new ArrayList<>();
             for (Player member : getTeamPlayers(team)) {
                 String name = member.getName();
                 if (sb.length() + 1 + name.length() >= 48) {
-                    lines.add(sb.toString());
+                    lines.add(Component.text(sb.toString()));
                     sb = new StringBuilder(name);
                 } else {
                     sb.append(" ").append(name);
                 }
             }
-            if (sb.length() > 0) lines.add(sb.toString());
-            event.addLines(plugin, Priority.HIGHEST, lines);
+            if (sb.length() > 0) lines.add(Component.text(sb.toString()));
+            event.add(plugin, Priority.HIGHEST, lines);
             break;
         }
         case KICKOFF: case PLAY: case GOAL: {
             GameTeam team = getTeam(player);
             if (team == null) return;
-            String[] lines = {
-                ChatColor.GRAY + "Right Click Block",
-                ChatColor.WHITE + "  Shallow Kick",
-                ChatColor.GRAY + "Left Click Block",
-                ChatColor.WHITE + "  High Kick",
-                ChatColor.GRAY + "Sprint",
-                ChatColor.WHITE + "  Strong Kick",
-                ChatColor.GRAY + "Right Click Falling Ball",
-                ChatColor.WHITE + "  Body Block",
+            Component[] lines = {
+                Component.text("Right Click Block", NamedTextColor.GRAY),
+                Component.text("  Shallow Kick", NamedTextColor.WHITE),
+                Component.text("Left Click Block", NamedTextColor.GRAY),
+                Component.text("  High Kick", NamedTextColor.WHITE),
+                Component.text("Sprint", NamedTextColor.GRAY),
+                Component.text("  Strong Kick", NamedTextColor.WHITE),
+                Component.text("Right Click Falling Ball", NamedTextColor.GRAY),
+                Component.text("  Body Block", NamedTextColor.WHITE),
             };
-            event.addLines(plugin, Priority.HIGHEST, lines);
+            event.add(plugin, Priority.HIGHEST, lines);
             break;
         }
         default: break;

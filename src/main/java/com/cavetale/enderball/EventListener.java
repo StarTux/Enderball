@@ -43,7 +43,7 @@ public final class EventListener implements Listener {
     void onEntityChangeBlock(EntityChangeBlockEvent event) {
         if (!(event.getEntity() instanceof FallingBlock)) return;
         FallingBlock fallingBlock = (FallingBlock) event.getEntity();
-        if (fallingBlock.getMaterial() != Material.DRAGON_EGG) return;
+        if (fallingBlock.getBlockData().getMaterial() != Material.DRAGON_EGG) return;
         Game game = plugin.getGameAt(fallingBlock.getLocation());
         if (game == null) return;
         if (event.getBlock().isEmpty()) {
@@ -57,7 +57,7 @@ public final class EventListener implements Listener {
     void onEntityDropItem(EntityDropItemEvent event) {
         if (!(event.getEntity() instanceof FallingBlock)) return;
         FallingBlock fallingBlock = (FallingBlock) event.getEntity();
-        if (fallingBlock.getMaterial() != Material.DRAGON_EGG) return;
+        if (fallingBlock.getBlockData().getMaterial() != Material.DRAGON_EGG) return;
         Game game = plugin.getGameAt(fallingBlock.getLocation());
         if (game == null) return;
         game.onBallBreak(fallingBlock, event);
@@ -89,7 +89,7 @@ public final class EventListener implements Listener {
         // falling blocks!
         if (!(event.getRightClicked() instanceof FallingBlock)) return;
         FallingBlock fallingBlock = (FallingBlock) event.getRightClicked();
-        if (fallingBlock.getMaterial() != Material.DRAGON_EGG) return;
+        if (fallingBlock.getBlockData().getMaterial() != Material.DRAGON_EGG) return;
         Game game = plugin.getGameAt(fallingBlock.getLocation());
         if (game == null) return;
         event.setCancelled(true);

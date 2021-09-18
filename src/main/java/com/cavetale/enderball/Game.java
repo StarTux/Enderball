@@ -27,6 +27,7 @@ import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
@@ -300,9 +301,11 @@ public final class Game {
         Nation b = getTeamNation(GameTeam.BLUE);
         TextColor white = NamedTextColor.WHITE;
         return Component.text()
-            .append(Component.text(a.name, white)).append(a.component).append(Component.space())
-            .append(Component.text(state.getScores().get(0) + " : " + state.getScores().get(1)))
-            .append(Component.space()).append(b.component).append(Component.text(b.name, white))
+            .append(Component.text(a.name, GameTeam.RED.textColor)).append(a.component).append(Component.space())
+            .append(Component.text("" + state.getScores().get(0), GameTeam.RED.textColor, TextDecoration.BOLD))
+            .append(Component.text(" : ", NamedTextColor.WHITE))
+            .append(Component.text("" + state.getScores().get(1), GameTeam.BLUE.textColor, TextDecoration.BOLD))
+            .append(Component.space()).append(b.component).append(Component.text(b.name, GameTeam.BLUE.textColor))
             .build();
     }
 
@@ -326,7 +329,7 @@ public final class Game {
         } else {
             chat = "Goal for " + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
         }
-        Title theTitle = Title.title(title, subtitle, Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO));
+        Title theTitle = Title.title(title, subtitle, Title.Times.of(Duration.ZERO, Duration.ofSeconds(3), Duration.ZERO));
         for (Player target : getPresentPlayers()) {
             target.sendMessage(chat);
             target.showTitle(theTitle);
@@ -787,8 +790,8 @@ public final class Game {
     void dress(Player player, GameTeam team) {
         player.getInventory().clear();
         if (team == null) return;
-        ItemStack helmet = state.getNations().get(team.ordinal()).bannerItem.clone();
-        player.getInventory().setHelmet(helmet);
+        //ItemStack helmet = state.getNations().get(team.ordinal()).bannerItem.clone();
+        //player.getInventory().setHelmet(helmet);
         player.getInventory().setChestplate(dye(Material.LEATHER_CHESTPLATE, team));
         player.getInventory().setLeggings(dye(Material.LEATHER_LEGGINGS, team));
         player.getInventory().setBoots(dye(Material.LEATHER_BOOTS, team));
@@ -850,8 +853,8 @@ public final class Game {
         case WAIT_FOR_PLAYERS: {
             Component[] lines = {
                 Component.text("Game starting soon!", NamedTextColor.GREEN),
-                Component.text("Stand on the playing", NamedTextColor.GRAY),
-                Component.text("field to join.", NamedTextColor.GRAY),
+                Component.text("Stand on the playing", NamedTextColor.YELLOW),
+                Component.text("field to join.", NamedTextColor.YELLOW),
             };
             event.add(plugin, Priority.HIGHEST, lines);
             break;
@@ -876,16 +879,22 @@ public final class Game {
         }
         case KICKOFF: case PLAY: case GOAL: {
             GameTeam team = getTeam(player);
+            Nation nation = getTeamNation(team);
             if (team == null) return;
             Component[] lines = {
-                Component.text("Right Click Block", NamedTextColor.GRAY),
-                Component.text("  Shallow Kick", NamedTextColor.WHITE),
-                Component.text("Left Click Block", NamedTextColor.GRAY),
-                Component.text("  High Kick", NamedTextColor.WHITE),
-                Component.text("Sprint", NamedTextColor.GRAY),
-                Component.text("  Strong Kick", NamedTextColor.WHITE),
-                Component.text("Right Click Falling Ball", NamedTextColor.GRAY),
-                Component.text("  Body Block", NamedTextColor.WHITE),
+                (Component.text().content("Your team ").color(NamedTextColor.GRAY)
+                 .append(nation.component)
+                 .append(Component.text(nation.name, team.textColor))
+                 .build()),
+                Component.empty(),
+                Component.text("Punch Ball", NamedTextColor.YELLOW)
+                .append(Component.text(" High Kick", NamedTextColor.WHITE)),
+                Component.text("Right Click Ball", NamedTextColor.YELLOW)
+                .append(Component.text(" Shallow", NamedTextColor.WHITE)),
+                Component.text("Sprint", NamedTextColor.YELLOW)
+                .append(Component.text(" More Power", NamedTextColor.WHITE)),
+                Component.text("Click Falling Ball", NamedTextColor.YELLOW)
+                .append(Component.text(" Block", NamedTextColor.WHITE)),
             };
             event.add(plugin, Priority.HIGHEST, lines);
             break;

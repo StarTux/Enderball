@@ -323,7 +323,7 @@ public final class Game {
             GameTeam playerTeam = getTeam(player);
             chat = player.getName() + " scored a " + (team == playerTeam ? "goal" : "own goal") + " for "
                 + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
-            if (playerTeam == team) {
+            if (playerTeam == team && state.isEvent()) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Fußball Striker Goal");
             }
         } else {
@@ -569,7 +569,9 @@ public final class Game {
                 if (getTeam(player) != null) {
                     player.getInventory().clear();
                     TitlePlugin.getInstance().setColor(player, null);
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+                    if (state.isEvent()) {
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+                    }
                 }
             }
             removeAllBalls();

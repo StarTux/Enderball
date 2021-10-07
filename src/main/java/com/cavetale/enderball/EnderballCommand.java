@@ -1,5 +1,6 @@
 package com.cavetale.enderball;
 
+import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
 import com.cavetale.enderball.struct.Cuboid;
@@ -7,6 +8,8 @@ import com.cavetale.enderball.util.WorldEdit;
 import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -28,6 +31,10 @@ public final class EnderballCommand implements TabExecutor {
             .senderCaller(this::reset);
         rootNode.addChild("start").denyTabCompletion()
             .senderCaller(this::start);
+        rootNode.addChild("event").arguments("true|false")
+            .description("Set event state")
+            .completers(CommandArgCompleter.list("true", "false"))
+            .senderCaller(this::event);
         plugin.getCommand("enderball").setExecutor(this);
     }
 
@@ -110,6 +117,21 @@ public final class EnderballCommand implements TabExecutor {
         plugin.getGame().resetGame();
         plugin.getGame().newPhase(GamePhase.WAIT_FOR_PLAYERS);
         sender.sendMessage("Game started");
+        return true;
+    }
+
+    boolean event(CommandSender sender, String[] args) {
+        if (args.length > 1) return false;
+        if (args.length >= 1) {
+            try {
+                plugin.getGame().getState().setEvent(Boolean.parseBoolean(args[0]));
+            } catch (IllegalArgumentException iae) {
+                throw new CommandWarn("Boolean expected: " + args[0]);
+            }
+            plugin.getGame().saveState();
+        }
+        sender.sendMessage(Component.text("Event: " + plugin.getGame().getState().isEvent(),
+                                          NamedTextColor.YELLOW));
         return true;
     }
 }

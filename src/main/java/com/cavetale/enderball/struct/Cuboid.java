@@ -2,15 +2,18 @@ package com.cavetale.enderball.struct;
 
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Value;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
+import org.bukkit.util.BoundingBox;
 
-@Value
+@Getter @RequiredArgsConstructor
 public final class Cuboid {
     public static final Cuboid ZERO = new Cuboid(Vec3i.ZERO, Vec3i.ZERO);
     public final Vec3i min;
     public final Vec3i max;
+    private transient BoundingBox boundingBox;
 
     public boolean contains(int x, int y, int z) {
         return x >= min.x && x <= max.x
@@ -75,5 +78,17 @@ public final class Cuboid {
         y = Math.min(y, max.y);
         z = Math.min(z, max.z);
         return new Vec3i(x, y, z);
+    }
+
+    public BoundingBox getBoundingBox() {
+        if (boundingBox == null) {
+            boundingBox = new BoundingBox((double) min.x, (double) min.y, (double) min.z,
+                                          (double) max.x + 1, (double) max.y + 1, (double) max.z + 1);
+        }
+        return boundingBox;
+    }
+
+    public boolean contains(BoundingBox bb) {
+        return getBoundingBox().contains(bb);
     }
 }

@@ -216,6 +216,11 @@ public final class Game {
             scoreGoal(goal, gameBall); // calls removeAllBalls()
             return true;
         }
+        if (gameBall.isEntity() && gameBall.getEntity() != null &&
+            !board.getField().contains(gameBall.getEntity().getBoundingBox())) {
+            kickoff(gameBall.getBlockVector(), gameBall.getLastKicker()); // calls removeAllBalls()
+            return true;
+        }
         if (!board.getField().contains(gameBall.getBlockVector())) {
             kickoff(gameBall.getBlockVector(), gameBall.getLastKicker()); // calls removeAllBalls()
             return true;

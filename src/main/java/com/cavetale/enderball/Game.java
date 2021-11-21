@@ -878,7 +878,7 @@ public final class Game {
             StringBuilder sb = new StringBuilder(team.chatColor + "Your team:" + ChatColor.WHITE);
             for (Player member : getTeamPlayers(team)) {
                 String name = member.getName();
-                if (sb.length() + 1 + name.length() >= 48) {
+                if (sb.length() + 1 + name.length() >= 24) {
                     lines.add(Component.text(sb.toString()));
                     sb = new StringBuilder(name);
                 } else {
@@ -901,7 +901,7 @@ public final class Game {
             StringBuilder sb = new StringBuilder();
             for (Player member : getTeamPlayers(team)) {
                 String name = member.getName();
-                if (sb.length() + 1 + name.length() >= 48) {
+                if (sb.length() + 1 + name.length() >= 24) {
                     lines.add(Component.text(sb.toString()));
                     sb = new StringBuilder(name);
                 } else {

@@ -58,6 +58,7 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 /**
@@ -216,10 +217,14 @@ public final class Game {
             scoreGoal(goal, gameBall); // calls removeAllBalls()
             return true;
         }
-        if (gameBall.isEntity() && gameBall.getEntity() != null &&
-            !board.getField().contains(gameBall.getEntity().getBoundingBox())) {
-            kickoff(gameBall.getBlockVector(), gameBall.getLastKicker()); // calls removeAllBalls()
-            return true;
+        if (gameBall.isEntity() && gameBall.getEntity() != null) {
+            BoundingBox bb = gameBall.getEntity().getBoundingBox();
+            if (!board.getField().contains(bb)
+                && board.getGoals().get(0).contains(bb)
+                && board.getGoals().get(1).contains(bb)) {
+                kickoff(gameBall.getBlockVector(), gameBall.getLastKicker()); // calls removeAllBalls()
+                return true;
+            }
         }
         if (!board.getField().contains(gameBall.getBlockVector())) {
             kickoff(gameBall.getBlockVector(), gameBall.getLastKicker()); // calls removeAllBalls()
@@ -869,8 +874,8 @@ public final class Game {
         case PICK_FLAG: {
             GameTeam team = getTeam(player);
             if (team == null) return;
-            StringBuilder sb = new StringBuilder(team.chatColor + "Your team:" + ChatColor.WHITE);
             List<Component> lines = new ArrayList<>();
+            StringBuilder sb = new StringBuilder(team.chatColor + "Your team:" + ChatColor.WHITE);
             for (Player member : getTeamPlayers(team)) {
                 String name = member.getName();
                 if (sb.length() + 1 + name.length() >= 48) {
@@ -888,21 +893,33 @@ public final class Game {
             GameTeam team = getTeam(player);
             if (team == null) return;
             Nation nation = getTeamNation(team);
-            Component[] lines = {
-                (Component.text().content("Your team ").color(NamedTextColor.GRAY)
-                 .append(nation.component)
-                 .append(Component.text(nation.name, team.textColor))
-                 .build()),
-                Component.empty(),
-                Component.text("Punch Ball", NamedTextColor.YELLOW)
-                .append(Component.text(" High Kick", NamedTextColor.WHITE)),
-                Component.text("Right Click Ball", NamedTextColor.YELLOW)
-                .append(Component.text(" Shallow", NamedTextColor.WHITE)),
-                Component.text("Sprint", NamedTextColor.YELLOW)
-                .append(Component.text(" More Power", NamedTextColor.WHITE)),
-                Component.text("Click Falling Ball", NamedTextColor.YELLOW)
-                .append(Component.text(" Block", NamedTextColor.WHITE)),
-            };
+            List<Component> lines = new ArrayList<>();
+            lines.add(Component.text().content("Your team ").color(NamedTextColor.GRAY)
+                      .append(nation.component)
+                      .append(Component.text(nation.name, team.textColor))
+                      .build());
+            StringBuilder sb = new StringBuilder();
+            for (Player member : getTeamPlayers(team)) {
+                String name = member.getName();
+                if (sb.length() + 1 + name.length() >= 48) {
+                    lines.add(Component.text(sb.toString()));
+                    sb = new StringBuilder(name);
+                } else {
+                    sb.append(" ").append(name);
+                }
+            }
+            if (sb.length() > 0) lines.add(Component.text(sb.toString()));
+            lines.add(Component.empty());
+            lines.addAll(List.of(new Component[] {
+                        Component.text("Punch Ball", NamedTextColor.YELLOW)
+                        .append(Component.text(" High Kick", NamedTextColor.WHITE)),
+                        Component.text("Right Click Ball", NamedTextColor.YELLOW)
+                        .append(Component.text(" Shallow", NamedTextColor.WHITE)),
+                        Component.text("Sprint", NamedTextColor.YELLOW)
+                        .append(Component.text(" More Power", NamedTextColor.WHITE)),
+                        Component.text("Click Falling Ball", NamedTextColor.YELLOW)
+                        .append(Component.text(" Block", NamedTextColor.WHITE)),
+                    }));
             event.add(plugin, Priority.HIGHEST, lines);
             break;
         }

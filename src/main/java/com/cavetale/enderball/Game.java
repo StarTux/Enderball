@@ -107,6 +107,10 @@ public final class Game {
         return Bukkit.getWorld(board.getWorld());
     }
 
+    public String getName() {
+        return board.getWorld();
+    }
+
     public void resetGame() {
         state.getScores().set(0, 0);
         state.getScores().set(1, 0);

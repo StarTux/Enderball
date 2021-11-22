@@ -1,7 +1,10 @@
 package com.cavetale.enderball;
 
+import com.cavetale.core.event.player.PlayerTeamQuery;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -132,5 +135,22 @@ public final class EventListener implements Listener {
         Player player = event.getPlayer();
         Game game = plugin.getGameAt(player.getLocation());
         if (game != null) game.onSidebar(event, player);
+    }
+
+    @EventHandler
+    protected void onPlayerTeamQuery(PlayerTeamQuery query) {
+        for (Game game : plugin.getGames()) {
+            for (GameTeam gameTeam : GameTeam.values()) {
+                String teamName = "enderball." + game.getName() + "." + gameTeam.name().toLowerCase();
+                Nation nation = game.getState().getNations().get(gameTeam.ordinal());
+                Component teamDisplayName = Component.join(JoinConfiguration.noSeparators(),
+                                                           nation.component,
+                                                           Component.text(nation.name, gameTeam.textColor));
+                PlayerTeamQuery.Team team = new PlayerTeamQuery.Team(teamName, teamDisplayName);
+                for (Player player : game.getTeamPlayers(gameTeam)) {
+                    query.setTeam(player, team);
+                }
+            }
+        }
     }
 }

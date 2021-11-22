@@ -5,6 +5,7 @@ import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
 import com.cavetale.enderball.struct.Cuboid;
 import com.cavetale.enderball.util.WorldEdit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,9 @@ public final class EnderballCommand implements TabExecutor {
             .description("Set event state")
             .completers(CommandArgCompleter.list("true", "false"))
             .senderCaller(this::event);
+        rootNode.addChild("tojava").denyTabCompletion()
+            .description("Serialize all nation flags to Java")
+            .senderCaller(this::toJava);
         plugin.getCommand("enderball").setExecutor(this);
     }
 
@@ -132,6 +136,17 @@ public final class EnderballCommand implements TabExecutor {
         }
         sender.sendMessage(Component.text("Event: " + plugin.getGame().getState().isEvent(),
                                           NamedTextColor.YELLOW));
+        return true;
+    }
+
+    protected boolean toJava(CommandSender sender, String[] args) {
+        if (args.length != 0) return false;
+        List<String> lines = new ArrayList<>();
+        for (Nation nation : Nation.values()) {
+            lines.add("// " + nation.name());
+            lines.addAll(com.cavetale.mytems.util.JavaItem.serializeToLines(nation.bannerItem));
+        }
+        sender.sendMessage(String.join("\n", lines));
         return true;
     }
 }

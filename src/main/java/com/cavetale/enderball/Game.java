@@ -811,7 +811,7 @@ public final class Game {
         player.getInventory().setChestplate(dye(Material.LEATHER_CHESTPLATE, team));
         player.getInventory().setLeggings(dye(Material.LEATHER_LEGGINGS, team));
         player.getInventory().setBoots(dye(Material.LEATHER_BOOTS, team));
-        player.getInventory().setItemInOffHand(Mytems.MAGIC_MAP.createItemStack(player));
+        player.getInventory().setItemInOffHand(Mytems.MAGIC_MAP.createItemStack());
         TitlePlugin.getInstance().setColor(player, team.textColor);
     }
 

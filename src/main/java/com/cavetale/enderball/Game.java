@@ -795,7 +795,7 @@ public final class Game {
             int slot = nation.ordinal();
             int votes = countNationVotes(nation, team);
             ItemStack item = nation.bannerItem.clone();
-            item.setAmount(Math.max(1, Math.min(64, votes)));
+            item.setAmount(Math.max(1, Math.min(64, 1 + votes)));
             gui.setItem(slot, item, click -> {
                     if (state.getPhase() != GamePhase.PICK_FLAG) return;
                     nationVotes.put(player.getUniqueId(), nation);

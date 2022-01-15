@@ -7,6 +7,7 @@ import com.cavetale.enderball.util.Fireworks;
 import com.cavetale.enderball.util.Gui;
 import com.cavetale.enderball.util.Json;
 import com.cavetale.mytems.Mytems;
+import com.cavetale.mytems.item.WardrobeItem;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.winthier.title.TitlePlugin;
@@ -118,7 +119,7 @@ public final class Game {
         state.setNations(new ArrayList<>());
         removeAllBalls();
         for (Player player : getPresentPlayers()) {
-            player.getInventory().clear();
+            clearInventory(player);
             TitlePlugin.getInstance().setColor(player, null);
         }
     }
@@ -581,7 +582,7 @@ public final class Game {
         case END: {
             for (Player player : getWorld().getPlayers()) {
                 if (getTeam(player) != null) {
-                    player.getInventory().clear();
+                    clearInventory(player);
                     TitlePlugin.getInstance().setColor(player, null);
                     if (state.isEvent()) {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
@@ -803,10 +804,8 @@ public final class Game {
     }
 
     protected void dress(Player player, GameTeam team) {
-        player.getInventory().clear();
+        clearInventory(player);
         if (team == null) return;
-        //ItemStack helmet = state.getNations().get(team.ordinal()).bannerItem.clone();
-        //player.getInventory().setHelmet(helmet);
         player.getInventory().setChestplate(dye(Material.LEATHER_CHESTPLATE, team));
         player.getInventory().setLeggings(dye(Material.LEATHER_LEGGINGS, team));
         player.getInventory().setBoots(dye(Material.LEATHER_BOOTS, team));
@@ -927,6 +926,17 @@ public final class Game {
             break;
         }
         default: break;
+        }
+    }
+
+    public static void clearInventory(Player player) {
+        for (int i = 0; i < player.getInventory().getSize(); i += 1) {
+            ItemStack item = player.getInventory().getItem(i);
+            Mytems mytems = Mytems.forItem(item);
+            if (mytems != null && mytems.getMytem() instanceof WardrobeItem) {
+                continue;
+            }
+            player.getInventory().clear(i);
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.cavetale.enderball;
 
+import com.cavetale.core.command.AbstractCommand;
 import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
@@ -7,22 +8,23 @@ import com.cavetale.enderball.struct.Cuboid;
 import com.cavetale.enderball.util.WorldEdit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.command.Command;
+import java.util.Map;
+import java.util.UUID;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
-@RequiredArgsConstructor
-public final class EnderballCommand implements TabExecutor {
-    private final EnderballPlugin plugin;
-    private CommandNode rootNode;
+public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
+    protected EnderballCommand(final EnderballPlugin plugin) {
+        super(plugin, "enderball");
+    }
 
-    public void enable() {
-        rootNode = new CommandNode("enderball");
+    @Override
+    protected void onEnable() {
         rootNode.addChild("select")
             .completableList(Arrays.asList("area", "field", "kickoff", "goal0", "goal1", "spawn0", "spawn1", "outside"))
             .playerCaller(this::select);
@@ -36,29 +38,35 @@ public final class EnderballCommand implements TabExecutor {
             .description("Set event state")
             .completers(CommandArgCompleter.list("true", "false"))
             .senderCaller(this::event);
+        rootNode.addChild("manual").arguments("true|false")
+            .description("Set manual mode")
+            .completers(CommandArgCompleter.list("true", "false"))
+            .senderCaller(this::manual);
         rootNode.addChild("tojava").denyTabCompletion()
             .description("Serialize all nation flags to Java")
             .senderCaller(this::toJava);
-        plugin.getCommand("enderball").setExecutor(this);
+        CommandNode teamNode = rootNode.addChild("team")
+            .description("Team commands");
+        teamNode.addChild("reset").denyTabCompletion()
+            .description("Reset teams")
+            .senderCaller(this::teamClear);
+        teamNode.addChild("red").arguments("<players>")
+            .description("Add players to red team")
+            .completers(CommandArgCompleter.NULL, CommandArgCompleter.REPEAT)
+            .senderCaller(this::teamRed);
+        teamNode.addChild("blue").arguments("<players>")
+            .description("Add players to blue team")
+            .completers(CommandArgCompleter.NULL, CommandArgCompleter.REPEAT)
+            .senderCaller(this::teamBlue);
     }
 
-    @Override
-    public boolean onCommand(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        return rootNode.call(sender, command, alias, args);
-    }
-
-    @Override
-    public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        return rootNode.complete(sender, command, alias, args);
-    }
-
-    Cuboid requireWorldEditSelection(Player player) throws CommandWarn {
+    protected Cuboid requireWorldEditSelection(Player player) throws CommandWarn {
         Cuboid cuboid = WorldEdit.getSelection(player);
         if (cuboid == null) throw new CommandWarn("Make a selection first!");
         return cuboid;
     }
 
-    boolean select(Player player, String[] args) {
+    protected boolean select(Player player, String[] args) {
         if (args.length != 1) return false;
         switch (args[0]) {
         case "world":
@@ -104,27 +112,27 @@ public final class EnderballCommand implements TabExecutor {
         return true;
     }
 
-    boolean save(CommandSender sender, String[] args) {
+    protected boolean save(CommandSender sender, String[] args) {
         plugin.getGame().saveState();
         sender.sendMessage("State saved!");
         return true;
     }
 
-    boolean reset(CommandSender sender, String[] args) {
+    protected boolean reset(CommandSender sender, String[] args) {
         plugin.getGame().newPhase(GamePhase.IDLE);
         plugin.getGame().saveState();
         sender.sendMessage("Game reset");
         return true;
     }
 
-    boolean start(CommandSender sender, String[] args) {
+    protected boolean start(CommandSender sender, String[] args) {
         plugin.getGame().resetGame();
         plugin.getGame().newPhase(GamePhase.WAIT_FOR_PLAYERS);
         sender.sendMessage("Game started");
         return true;
     }
 
-    boolean event(CommandSender sender, String[] args) {
+    protected boolean event(CommandSender sender, String[] args) {
         if (args.length > 1) return false;
         if (args.length >= 1) {
             try {
@@ -134,8 +142,24 @@ public final class EnderballCommand implements TabExecutor {
             }
             plugin.getGame().saveState();
         }
-        sender.sendMessage(Component.text("Event: " + plugin.getGame().getState().isEvent(),
-                                          NamedTextColor.YELLOW));
+        boolean event = plugin.getGame().getState().isEvent();
+        sender.sendMessage(text("Event Mode: " + event,
+                                event ? GREEN : RED));
+        return true;
+    }
+
+    protected boolean manual(CommandSender sender, String[] args) {
+        if (args.length > 1) return false;
+        if (args.length >= 1) {
+            try {
+                plugin.getGame().getState().setManual(Boolean.parseBoolean(args[0]));
+            } catch (IllegalArgumentException iae) {
+                throw new CommandWarn("Boolean expected: " + args[0]);
+            }
+            plugin.getGame().saveState();
+        }
+        sender.sendMessage(text("Manual Mode: " + plugin.getGame().getState().isManual(),
+                                YELLOW));
         return true;
     }
 
@@ -147,6 +171,51 @@ public final class EnderballCommand implements TabExecutor {
             lines.addAll(com.cavetale.mytems.util.JavaItem.serializeToLines(nation.bannerItem));
         }
         sender.sendMessage(String.join("\n", lines));
+        return true;
+    }
+
+    protected boolean teamClear(CommandSender sender, String[] args) {
+        if (args.length == 0) return false;
+        Game game = plugin.getGame();
+        game.getState().setTeams(new HashMap<>());
+        game.saveState();
+        sender.sendMessage(text("Teams were reset", YELLOW));
+        return true;
+    }
+
+    protected boolean teamRed(CommandSender sender, String[] args) {
+        return teamMembers(GameTeam.RED, sender, args);
+    }
+
+    protected boolean teamBlue(CommandSender sender, String[] args) {
+        return teamMembers(GameTeam.BLUE, sender, args);
+    }
+
+    protected boolean teamMembers(GameTeam team, CommandSender sender, String[] args) {
+        if (args.length == 0) return false;
+        Game game = plugin.getGame();
+        Map<UUID, GameTeam> addMap = new HashMap<>();
+        for (String arg : args) {
+            Player target = Bukkit.getPlayerExact(arg);
+            if (target == null) {
+                throw new CommandWarn("Player not found: " + arg);
+            }
+            addMap.put(target.getUniqueId(), team);
+        }
+        if (game.getState().getTeams() == null) {
+            game.getState().setTeams(new HashMap<>());
+        }
+        game.getState().getTeams().putAll(addMap);
+        if (game.getState().getPhase().isPlaying()) {
+            for (Map.Entry<UUID, GameTeam> entry : addMap.entrySet()) {
+                Player target = Bukkit.getPlayer(entry.getKey());
+                if (target == null) continue;
+                game.dress(target, entry.getValue());
+            }
+        }
+        sender.sendMessage(text("Added to team " + team.humanName
+                                + ": " + String.join(" ", args),
+                                YELLOW));
         return true;
     }
 }

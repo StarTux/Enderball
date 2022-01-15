@@ -643,7 +643,11 @@ public final class Game {
             long total = 30000;
             long timeLeft = timeLeft(state.getWaitForPlayersStarted(), total);
             if (timeLeft <= 0) {
-                newPhase(GamePhase.TEAMS);
+                if (state.isManual()) {
+                    newPhase(GamePhase.KICKOFF);
+                } else {
+                    newPhase(GamePhase.TEAMS);
+                }
             } else {
                 bossBar.progress(clamp1((float) timeLeft / (float) total));
             }
@@ -742,7 +746,11 @@ public final class Game {
             long timeLeft = timeLeft(state.getEndStarted(), total);
             if (timeLeft <= 0) {
                 resetGame();
-                newPhase(GamePhase.WAIT_FOR_PLAYERS);
+                if (state.isManual()) {
+                    newPhase(GamePhase.IDLE);
+                } else {
+                    newPhase(GamePhase.WAIT_FOR_PLAYERS);
+                }
             } else {
                 if ((fireworkTicks++ % 10) == 0) {
                     Cuboid field = board.getField();

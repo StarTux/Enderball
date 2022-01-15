@@ -10,4 +10,14 @@ public enum GamePhase {
     PLAY,
     GOAL,
     END;
+
+    public boolean isPlaying() {
+        switch (this) {
+        case KICKOFF:
+        case PLAY:
+        case GOAL:
+            return true;
+        default: return false;
+        }
+    }
 }

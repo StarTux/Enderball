@@ -123,14 +123,14 @@ public final class Game {
         }
     }
 
-    GameBall getBall(Block block) {
+    protected GameBall getBall(Block block) {
         for (GameBall ball : state.getBalls()) {
             if (ball.isBlock() && ball.getBlockVector().isSimilar(block)) return ball;
         }
         return null;
     }
 
-    GameBall getBall(Entity entity) {
+    protected GameBall getBall(Entity entity) {
         UUID uuid = entity.getUniqueId();
         for (GameBall ball : state.getBalls()) {
             if (uuid.equals(ball.getEntityUuid())) return ball;
@@ -138,7 +138,7 @@ public final class Game {
         return null;
     }
 
-    GameBall getOrCreateBall(Block block) {
+    protected GameBall getOrCreateBall(Block block) {
         GameBall gameBall = getBall(block);
         if (gameBall == null) {
             gameBall = new GameBall();
@@ -148,7 +148,7 @@ public final class Game {
         return gameBall;
     }
 
-    GameBall getOrCreateBall(Entity entity) {
+    protected GameBall getOrCreateBall(Entity entity) {
         GameBall gameBall = getBall(entity);
         if (gameBall == null) {
             gameBall = new GameBall();
@@ -158,11 +158,11 @@ public final class Game {
         return gameBall;
     }
 
-    GameTeam getTeam(Player player) {
+    protected GameTeam getTeam(Player player) {
         return state.getTeams().get(player.getUniqueId());
     }
 
-    GameTeam getTeam(UUID uuid) {
+    protected GameTeam getTeam(UUID uuid) {
         return state.getTeams().get(uuid);
     }
 
@@ -207,7 +207,7 @@ public final class Game {
         state.getBalls().add(gameBall);
     }
 
-    GameTeam getGoal(Vec3i vec) {
+    protected GameTeam getGoal(Vec3i vec) {
         for (int i = 0; i < 2; i += 1) {
             Cuboid cuboid = board.getGoals().get(i);
             if (cuboid.contains(vec)) return GameTeam.of(i);
@@ -215,7 +215,7 @@ public final class Game {
         return null;
     }
 
-    boolean ballZoneAction(GameBall gameBall) {
+    protected boolean ballZoneAction(GameBall gameBall) {
         GameTeam goal = getGoal(gameBall.getBlockVector());
         if (goal != null) {
             scoreGoal(goal, gameBall); // calls removeAllBalls()
@@ -758,7 +758,7 @@ public final class Game {
         }
     }
 
-    Gui openNationGui(Player player, GameTeam team) {
+    protected Gui openNationGui(Player player, GameTeam team) {
         int rows = (Nation.values().length - 1) / 9 + 1;
         int size = rows * 9;
         Gui gui = new Gui(plugin)
@@ -770,7 +770,7 @@ public final class Game {
         return gui;
     }
 
-    int countNationVotes(Nation nation, GameTeam team) {
+    protected int countNationVotes(Nation nation, GameTeam team) {
         if (nationVotes == null) return 0;
         int result = 0;
         for (Map.Entry<UUID, Nation> entry : nationVotes.entrySet()) {
@@ -781,7 +781,7 @@ public final class Game {
         return result;
     }
 
-    void updateNationGui(Player player, Gui gui, GameTeam team) {
+    protected void updateNationGui(Player player, Gui gui, GameTeam team) {
         for (Nation nation : Nation.values()) {
             int slot = nation.ordinal();
             int votes = countNationVotes(nation, team);
@@ -794,8 +794,7 @@ public final class Game {
                             for (Player target : getTeamPlayers(team)) {
                                 Gui gui2 = Gui.of(target);
                                 if (gui2 == null) return;
-                                updateNationGui(target, gui2, team);
-                                target.updateInventory();
+                                openNationGui(target, team);
                             }
                         });
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1.0f, 1.0f);
@@ -803,7 +802,7 @@ public final class Game {
         }
     }
 
-    void dress(Player player, GameTeam team) {
+    protected void dress(Player player, GameTeam team) {
         player.getInventory().clear();
         if (team == null) return;
         //ItemStack helmet = state.getNations().get(team.ordinal()).bannerItem.clone();
@@ -815,7 +814,7 @@ public final class Game {
         TitlePlugin.getInstance().setColor(player, team.textColor);
     }
 
-    ItemStack dye(Material mat, GameTeam team) {
+    protected ItemStack dye(Material mat, GameTeam team) {
         ItemStack item = new ItemStack(mat);
         LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
         meta.setColor(team.dyeColor.getColor());
@@ -830,7 +829,7 @@ public final class Game {
         dress(player, getTeam(player));
     }
 
-    long timeLeft(long other, long total) {
+    protected long timeLeft(long other, long total) {
         return Math.max(0L, other + total - System.currentTimeMillis());
     }
 
@@ -838,7 +837,7 @@ public final class Game {
         return state.getScores().get(team.toIndex());
     }
 
-    float clamp1(float in) {
+    protected float clamp1(float in) {
         return Math.max(0, Math.min(1, in));
     }
 

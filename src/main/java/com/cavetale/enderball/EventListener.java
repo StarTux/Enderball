@@ -140,7 +140,7 @@ public final class EventListener implements Listener {
     @EventHandler
     protected void onPlayerTeamQuery(PlayerTeamQuery query) {
         for (Game game : plugin.getGames()) {
-            if (game.getTeams().isEmpty()) continue;
+            if (game.getState().getTeams().isEmpty()) continue;
             if (game.getState().getNations().isEmpty()) continue;
             for (GameTeam gameTeam : GameTeam.values()) {
                 String teamName = "enderball." + game.getName() + "." + gameTeam.name().toLowerCase();

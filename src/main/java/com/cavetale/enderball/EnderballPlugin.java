@@ -1,7 +1,7 @@
 package com.cavetale.enderball;
 
+import com.cavetale.core.util.Json;
 import com.cavetale.enderball.util.Gui;
-import com.cavetale.enderball.util.Json;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;

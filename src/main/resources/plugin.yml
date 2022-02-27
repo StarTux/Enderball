@@ -14,14 +14,18 @@ softdepend: []
 commands:
 
   enderball:
-    aliases: []
+    aliases: [enderballadmin, enderballadm]
     description: Enderball Command
-    permission: enderball.enderball
+    permission: enderball.admin
     usage: |-
       /enderball
 
 permissions:
 
   enderball.enderball:
+    description: ?
+    default: false
+
+  enderball.admin:
     description: Use /enderball
     default: op

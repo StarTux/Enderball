@@ -1,11 +1,11 @@
 package com.cavetale.enderball;
 
-import com.cavetale.core.font.DefaultFont;
+import com.cavetale.core.font.GuiOverlay;
+import com.cavetale.core.util.Json;
 import com.cavetale.enderball.struct.Cuboid;
 import com.cavetale.enderball.struct.Vec3i;
 import com.cavetale.enderball.util.Fireworks;
 import com.cavetale.enderball.util.Gui;
-import com.cavetale.enderball.util.Json;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.WardrobeItem;
 import com.cavetale.sidebar.PlayerSidebarEvent;
@@ -770,10 +770,15 @@ public final class Game {
     protected Gui openNationGui(Player player, GameTeam team) {
         int rows = (Nation.values().length - 1) / 9 + 1;
         int size = rows * 9;
+        Nation nation = nationVotes.get(player.getUniqueId());
+        GuiOverlay.Builder builder = GuiOverlay.BLANK.builder(size, NamedTextColor.BLACK)
+            .title(Component.text("Nation Vote", NamedTextColor.WHITE));
+        if (nation != null) {
+            builder.highlightSlot(nation.ordinal(), NamedTextColor.WHITE);
+        }
         Gui gui = new Gui(plugin)
             .size(size)
-            .title(DefaultFont.guiBlankOverlay(size, NamedTextColor.BLACK,
-                                               Component.text("Nation Vote", NamedTextColor.WHITE)));
+            .title(builder.build());
         updateNationGui(player, gui, team);
         gui.open(player);
         return gui;
@@ -807,6 +812,7 @@ public final class Game {
                             }
                         });
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1.0f, 1.0f);
+                    System.out.println(Json.serialize(nationVotes));
                 });
         }
     }

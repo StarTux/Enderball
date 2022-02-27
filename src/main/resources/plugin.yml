@@ -23,7 +23,7 @@ commands:
 permissions:
 
   enderball.enderball:
-    description: ?
+    description: '?'
     default: false
 
   enderball.admin:

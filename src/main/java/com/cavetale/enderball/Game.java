@@ -26,12 +26,11 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
-import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.DyeColor;
 import org.bukkit.GameMode;
@@ -53,6 +52,7 @@ import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDropItemEvent;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.inventory.ItemFlag;
@@ -61,12 +61,19 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
+import static net.kyori.adventure.text.Component.empty;
+import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.space;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 /**
  * Runtime class of one game.
  */
 @RequiredArgsConstructor @Getter
 public final class Game {
+    public static final long GAME_TIME = 60L * 15L * 1000L;
     private final EnderballPlugin plugin;
     private final GameBoard board;
     private final GameState state;
@@ -81,7 +88,7 @@ public final class Game {
         board.prep();
         state.prep();
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
-        bossBar = BossBar.bossBar(Component.text("Enderball"), 1.0f,
+        bossBar = BossBar.bossBar(text("Enderball"), 1.0f,
                                   BossBar.Color.GREEN, BossBar.Overlay.PROGRESS);
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.showBossBar(bossBar);
@@ -182,20 +189,22 @@ public final class Game {
         block.setType(Material.AIR, false);
         Location ballLocation = block.getLocation().add(0.5, 0.0, 0.5);
         Vector vec = ballLocation.toVector().subtract(player.getLocation().toVector());
-        vec.setY(0.0).normalize().setY(height.height).multiply(strength.strength);
+        double rnd = (0.25 * (random.nextDouble() - random.nextDouble())) + 1.0;
+        vec.setY(0.0).normalize().setY(height.height).multiply(strength.strength * rnd);
         FallingBlock fallingBlock = block.getWorld().spawnFallingBlock(ballLocation, Material.DRAGON_EGG.createBlockData());
         fallingBlock.setDropItem(true);
         fallingBlock.setVelocity(vec);
         fallingBlock.setGlowing(true);
         gameBall.setEntityUuid(fallingBlock.getUniqueId());
         gameBall.setLastKicker(player.getUniqueId());
-        player.setFoodLevel(Math.max(0, player.getFoodLevel() - 1));
         switch (strength) {
         case SHORT:
             ballLocation.getWorld().playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 2.0f);
+            player.setFoodLevel(Math.max(0, player.getFoodLevel() - 5));
             break;
         case LONG:
             ballLocation.getWorld().playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.66f);
+            player.setFoodLevel(Math.max(0, player.getFoodLevel() - 10));
             break;
         default: break;
         }
@@ -314,13 +323,13 @@ public final class Game {
     public Component getScoreComponent() {
         Nation a = getTeamNation(GameTeam.RED);
         Nation b = getTeamNation(GameTeam.BLUE);
-        TextColor white = NamedTextColor.WHITE;
-        return Component.text()
-            .append(Component.text(a.name, GameTeam.RED.textColor)).append(a.component).append(Component.space())
-            .append(Component.text("" + state.getScores().get(0), GameTeam.RED.textColor, TextDecoration.BOLD))
-            .append(Component.text(" : ", NamedTextColor.WHITE))
-            .append(Component.text("" + state.getScores().get(1), GameTeam.BLUE.textColor, TextDecoration.BOLD))
-            .append(Component.space()).append(b.component).append(Component.text(b.name, GameTeam.BLUE.textColor))
+        TextColor white = WHITE;
+        return text()
+            .append(text(a.name, GameTeam.RED.textColor)).append(a.component).append(space())
+            .append(text("" + state.getScores().get(0), GameTeam.RED.textColor, TextDecoration.BOLD))
+            .append(text(" : ", WHITE))
+            .append(text("" + state.getScores().get(1), GameTeam.BLUE.textColor, TextDecoration.BOLD))
+            .append(space()).append(b.component).append(text(b.name, GameTeam.BLUE.textColor))
             .build();
     }
 
@@ -331,7 +340,7 @@ public final class Game {
         int index = team.toIndex();
         state.getScores().set(index, state.getScores().get(index) + 1);
         Player player = gameBall.getLastKickerPlayer();
-        Component title = Component.text("Goal!", team.textColor);
+        Component title = text("Goal!", team.textColor);
         Component subtitle = getScoreComponent();
         String chat;
         if (player != null) {
@@ -350,7 +359,7 @@ public final class Game {
             target.showTitle(theTitle);
         }
         plugin.getLogger().info("Goal for " + team + ": " + (player != null ? player.getName() : "null"));
-        bossBar.name(Component.text(chat));
+        bossBar.name(text(chat));
         state.setKickoffTeam(goal.toIndex());
         if (Math.abs(getScore(GameTeam.RED) - getScore(GameTeam.BLUE)) >= 3) {
             newPhase(GamePhase.END);
@@ -421,12 +430,12 @@ public final class Game {
             nations.remove(nation);
             state.getNations().add(nation);
             for (Player player : getTeamPlayers(team)) {
-                player.sendMessage(Component.text()
-                                   .append(Component.text("Your team flag is ", team.textColor))
-                                   .append(nation.component).append(Component.text(nation.name, team.textColor))
+                player.sendMessage(text()
+                                   .append(text("Your team flag is ", team.textColor))
+                                   .append(nation.component).append(text(nation.name, team.textColor))
                                    .build());
-                player.showTitle(Title.title(Component.empty(),
-                                             Component.text(nation.name, team.textColor)));
+                player.showTitle(Title.title(empty(),
+                                             text(nation.name, team.textColor)));
             }
         }
         // WARNING: Assumes board along z axis!
@@ -519,13 +528,13 @@ public final class Game {
         state.setPhase(phase);
         switch (phase) {
         case IDLE:
-            bossBar.name(Component.text("Paused", NamedTextColor.GRAY));
+            bossBar.name(text("Paused", GRAY));
             bossBar.progress(1.0f);
             resetGame();
             break;
         case WAIT_FOR_PLAYERS:
             removeAllBalls();
-            bossBar.name(Component.text("Preparing the Game", NamedTextColor.GRAY));
+            bossBar.name(text("Preparing the Game", GRAY));
             state.setWaitForPlayersStarted(System.currentTimeMillis());
             break;
         case TEAMS:
@@ -533,7 +542,7 @@ public final class Game {
             setupPhase(GamePhase.PICK_FLAG);
             break;
         case PICK_FLAG:
-            bossBar.name(Component.text("Pick a Nation", NamedTextColor.GREEN));
+            bossBar.name(text("Pick a Nation", GREEN));
             nationVotes.clear();
             state.setPickFlagStarted(System.currentTimeMillis());
             break;
@@ -552,11 +561,11 @@ public final class Game {
         case KICKOFF: {
             GameTeam team = GameTeam.of(state.getKickoffTeam());
             Nation nation = getTeamNation(team);
-            Component txt = Component.text()
-                .append(Component.text("Kickoff for ", NamedTextColor.WHITE))
-                .append(nation.component).append(Component.text(nation.name, team.textColor))
+            Component txt = text()
+                .append(text("Kickoff for ", WHITE))
+                .append(nation.component).append(text(nation.name, team.textColor))
                 .build();
-            Title title = Title.title(Component.empty(), txt,
+            Title title = Title.title(empty(), txt,
                                       Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO));
             for (Player player : getPresentPlayers()) {
                 player.showTitle(title);
@@ -606,14 +615,14 @@ public final class Game {
             if (winnerTeam != null) {
                 text = "Team " + winnerTeam.chatColor + getTeamName(winnerTeam) + ChatColor.RESET + " wins!";
                 Nation nation = getTeamNation(winnerTeam);
-                title = Component.text().append(nation.component)
-                    .append(Component.text(nation.name, winnerTeam.textColor))
-                    .append(Component.text(" Wins!", NamedTextColor.WHITE))
+                title = text().append(nation.component)
+                    .append(text(nation.name, winnerTeam.textColor))
+                    .append(text(" Wins!", WHITE))
                     .build();
                 plugin.getLogger().info("Winner: " + getTeamName(winnerTeam));
             } else {
                 text = "It's a draw!";
-                title = Component.text("Draw", NamedTextColor.GRAY);
+                title = text("Draw", GRAY);
                 plugin.getLogger().info("Winner: Draw");
             }
             Title theTitle = Title.title(title, getScoreComponent(),
@@ -632,6 +641,18 @@ public final class Game {
     }
 
     void tick() {
+        if (state.getPhase().isPlaying()) {
+            if (hungerTicks++ % 10 == 0) {
+                for (Player player : getPresentPlayers()) {
+                    if (getTeam(player) == null) continue;
+                    if (player.isSprinting()) {
+                        player.setFoodLevel(Math.max(0, player.getFoodLevel() - 1));
+                    } else {
+                        player.setFoodLevel(Math.min(20, player.getFoodLevel() + 1));
+                    }
+                }
+            }
+        }
         switch (state.getPhase()) {
         case IDLE: return;
         case WAIT_FOR_PLAYERS: {
@@ -698,7 +719,7 @@ public final class Game {
                 }
                 if (ballZoneAction(gameBall)) return;
             }
-            long total = 60L * 15L * 1000L;
+            long total = GAME_TIME;
             long timeLeft = timeLeft(state.getGameStarted(), total);
             if (timeLeft <= 0) {
                 newPhase(GamePhase.END);
@@ -710,13 +731,6 @@ public final class Game {
                     FallingBlock entity = ball.getEntity();
                     if (entity == null) continue;
                     entity.getWorld().spawnParticle(Particle.FIREWORKS_SPARK, entity.getLocation(), 1, 0, 0, 0, 0);
-                }
-            }
-            if (hungerTicks++ % 10 == 0) {
-                for (Player player : getPresentPlayers()) {
-                    if (getTeam(player) != null) {
-                        player.setFoodLevel(Math.min(20, player.getFoodLevel() + 1));
-                    }
                 }
             }
             for (Player player : getEligiblePlayers()) {
@@ -771,10 +785,10 @@ public final class Game {
         int rows = (Nation.values().length - 1) / 9 + 1;
         int size = rows * 9;
         Nation nation = nationVotes.get(player.getUniqueId());
-        GuiOverlay.Builder builder = GuiOverlay.BLANK.builder(size, NamedTextColor.BLACK)
-            .title(Component.text("Nation Vote", NamedTextColor.WHITE));
+        GuiOverlay.Builder builder = GuiOverlay.BLANK.builder(size, BLACK)
+            .title(text("Nation Vote", WHITE));
         if (nation != null) {
-            builder.highlightSlot(nation.ordinal(), NamedTextColor.WHITE);
+            builder.highlightSlot(nation.ordinal(), WHITE);
         }
         Gui gui = new Gui(plugin)
             .size(size)
@@ -831,7 +845,7 @@ public final class Game {
         ItemStack item = new ItemStack(mat);
         LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
         meta.setColor(team.dyeColor.getColor());
-        meta.displayName(Component.text(getTeamName(team), team.textColor));
+        meta.displayName(text(getTeamName(team), team.textColor));
         meta.addItemFlags(ItemFlag.values());
         item.setItemMeta(meta);
         return item;
@@ -875,14 +889,25 @@ public final class Game {
         fallingBlock.getWorld().playSound(fallingBlock.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.5f);
     }
 
+    public static Component formatTime(long millis) {
+        long seconds = (millis - 1) / 1000L + 1L;
+        long minutes = seconds / 60L;
+        return join(noSeparators(),
+                    text(minutes),
+                    text("m", WHITE),
+                    space(),
+                    text(seconds % 60L, WHITE),
+                    text("s"));
+    }
+
     public void onSidebar(PlayerSidebarEvent event, Player player) {
         if (player.getGameMode() == GameMode.SPECTATOR) return;
         switch (state.getPhase()) {
         case WAIT_FOR_PLAYERS: {
             Component[] lines = {
-                Component.text("Game starting soon!", NamedTextColor.GREEN),
-                Component.text("Stand on the playing", NamedTextColor.YELLOW),
-                Component.text("field to join.", NamedTextColor.YELLOW),
+                text("Game starting soon!", GREEN),
+                text("Stand on the playing", YELLOW),
+                text("field to join.", YELLOW),
             };
             event.add(plugin, Priority.HIGHEST, lines);
             break;
@@ -895,13 +920,13 @@ public final class Game {
             for (Player member : getTeamPlayers(team)) {
                 String name = member.getName();
                 if (sb.length() + 1 + name.length() >= 24) {
-                    lines.add(Component.text(sb.toString()));
+                    lines.add(text(sb.toString()));
                     sb = new StringBuilder(name);
                 } else {
                     sb.append(" ").append(name);
                 }
             }
-            if (sb.length() > 0) lines.add(Component.text(sb.toString()));
+            if (sb.length() > 0) lines.add(text(sb.toString()));
             event.add(plugin, Priority.HIGHEST, lines);
             break;
         }
@@ -910,31 +935,35 @@ public final class Game {
             if (team == null) return;
             Nation nation = getTeamNation(team);
             List<Component> lines = new ArrayList<>();
-            lines.add(Component.text().content("Your team ").color(NamedTextColor.GRAY)
+            long timeLeft = timeLeft(state.getGameStarted(), GAME_TIME);
+            lines.add(join(noSeparators(),
+                           text("Time ", GRAY),
+                           formatTime(timeLeft)));
+            lines.add(text().content("Your team ").color(GRAY)
                       .append(nation.component)
-                      .append(Component.text(nation.name, team.textColor))
+                      .append(text(nation.name, team.textColor))
                       .build());
             StringBuilder sb = new StringBuilder();
             for (Player member : getTeamPlayers(team)) {
                 String name = member.getName();
                 if (sb.length() + 1 + name.length() >= 24) {
-                    lines.add(Component.text(sb.toString()));
+                    lines.add(text(sb.toString()));
                     sb = new StringBuilder(name);
                 } else {
                     sb.append(" ").append(name);
                 }
             }
-            if (sb.length() > 0) lines.add(Component.text(sb.toString()));
-            lines.add(Component.empty());
+            if (sb.length() > 0) lines.add(text(sb.toString()));
+            lines.add(empty());
             lines.addAll(List.of(new Component[] {
-                        Component.text("Punch Ball", NamedTextColor.YELLOW)
-                        .append(Component.text(" High Kick", NamedTextColor.WHITE)),
-                        Component.text("Right Click Ball", NamedTextColor.YELLOW)
-                        .append(Component.text(" Shallow", NamedTextColor.WHITE)),
-                        Component.text("Sprint", NamedTextColor.YELLOW)
-                        .append(Component.text(" More Power", NamedTextColor.WHITE)),
-                        Component.text("Click Falling Ball", NamedTextColor.YELLOW)
-                        .append(Component.text(" Block", NamedTextColor.WHITE)),
+                        text("Punch Ball", YELLOW)
+                        .append(text(" High Kick", WHITE)),
+                        text("Right Click Ball", YELLOW)
+                        .append(text(" Shallow", WHITE)),
+                        text("Sprint", YELLOW)
+                        .append(text(" More Power", WHITE)),
+                        text("Click Falling Ball", YELLOW)
+                        .append(text(" Block", WHITE)),
                     }));
             event.add(plugin, Priority.HIGHEST, lines);
             break;
@@ -952,5 +981,9 @@ public final class Game {
             }
             player.getInventory().clear(i);
         }
+    }
+
+    public void onFoodLevelChange(FoodLevelChangeEvent event, Player player) {
+        event.setCancelled(true);
     }
 }

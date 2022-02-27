@@ -17,6 +17,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDropItemEvent;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -135,6 +136,13 @@ public final class EventListener implements Listener {
         Player player = event.getPlayer();
         Game game = plugin.getGameAt(player.getLocation());
         if (game != null) game.onSidebar(event, player);
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.NORMAL)
+    void onFoodLevelChange(FoodLevelChangeEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        Game game = plugin.getGameAt(player.getLocation());
+        if (game != null) game.onFoodLevelChange(event, player);
     }
 
     @EventHandler

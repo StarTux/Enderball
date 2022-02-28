@@ -826,7 +826,6 @@ public final class Game {
                             }
                         });
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1.0f, 1.0f);
-                    System.out.println(Json.serialize(nationVotes));
                 });
         }
     }
@@ -943,6 +942,16 @@ public final class Game {
                       .append(nation.component)
                       .append(text(nation.name, team.textColor))
                       .build());
+            lines.addAll(List.of(new Component[] {
+                        text("Punch Ball", YELLOW)
+                        .append(text(" High Kick", WHITE)),
+                        text("Right Click Ball", YELLOW)
+                        .append(text(" Shallow", WHITE)),
+                        text("Sprint", YELLOW)
+                        .append(text(" More Power", WHITE)),
+                        text("Click Falling Ball", YELLOW)
+                        .append(text(" Block", WHITE)),
+                    }));
             StringBuilder sb = new StringBuilder();
             for (Player member : getTeamPlayers(team)) {
                 String name = member.getName();
@@ -954,17 +963,6 @@ public final class Game {
                 }
             }
             if (sb.length() > 0) lines.add(text(sb.toString()));
-            lines.add(empty());
-            lines.addAll(List.of(new Component[] {
-                        text("Punch Ball", YELLOW)
-                        .append(text(" High Kick", WHITE)),
-                        text("Right Click Ball", YELLOW)
-                        .append(text(" Shallow", WHITE)),
-                        text("Sprint", YELLOW)
-                        .append(text(" More Power", WHITE)),
-                        text("Click Falling Ball", YELLOW)
-                        .append(text(" Block", WHITE)),
-                    }));
             event.add(plugin, Priority.HIGHEST, lines);
             break;
         }

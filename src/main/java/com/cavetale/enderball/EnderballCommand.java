@@ -6,6 +6,7 @@ import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
 import com.cavetale.enderball.struct.Cuboid;
 import com.cavetale.enderball.util.WorldEdit;
+import com.winthier.playercache.PlayerCache;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -45,6 +46,10 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         rootNode.addChild("tojava").denyTabCompletion()
             .description("Serialize all nation flags to Java")
             .senderCaller(this::toJava);
+        rootNode.addChild("event").arguments("true|false")
+            .description("Set event mode")
+            .completers(CommandArgCompleter.list("true", "false"))
+            .senderCaller(this::event);
         CommandNode teamNode = rootNode.addChild("team")
             .description("Team commands");
         teamNode.addChild("reset").denyTabCompletion()
@@ -58,6 +63,18 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
             .description("Add players to blue team")
             .completers(CommandArgCompleter.NULL, CommandArgCompleter.REPEAT)
             .senderCaller(this::teamBlue);
+        CommandNode scoreNode = rootNode.addChild("score").description("Score subcommands");
+        scoreNode.addChild("reset").denyTabCompletion()
+            .description("Reset scores")
+            .senderCaller(this::scoreReset);
+        scoreNode.addChild("add").arguments("<player> <amount>")
+            .description("Manipulate score")
+            .completers(PlayerCache.NAME_COMPLETER,
+                        CommandArgCompleter.integer(i -> i != 0))
+            .senderCaller(this::scoreAdd);
+        scoreNode.addChild("reward").denyTabCompletion()
+            .description("Reward scores")
+            .senderCaller(this::scoreReward);
     }
 
     protected Cuboid requireWorldEditSelection(Player player) throws CommandWarn {
@@ -132,22 +149,6 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         return true;
     }
 
-    protected boolean event(CommandSender sender, String[] args) {
-        if (args.length > 1) return false;
-        if (args.length >= 1) {
-            try {
-                plugin.getGame().getState().setEvent(Boolean.parseBoolean(args[0]));
-            } catch (IllegalArgumentException iae) {
-                throw new CommandWarn("Boolean expected: " + args[0]);
-            }
-            plugin.getGame().saveState();
-        }
-        boolean event = plugin.getGame().getState().isEvent();
-        sender.sendMessage(text("Event Mode: " + event,
-                                event ? GREEN : RED));
-        return true;
-    }
-
     protected boolean manual(CommandSender sender, String[] args) {
         if (args.length > 1) return false;
         if (args.length >= 1) {
@@ -171,6 +172,23 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
             lines.addAll(com.cavetale.mytems.util.JavaItem.serializeToLines(nation.bannerItem));
         }
         sender.sendMessage(String.join("\n", lines));
+        return true;
+    }
+
+    private boolean event(CommandSender sender, String[] args) {
+        if (args.length > 1) return false;
+        if (args.length == 1) {
+            try {
+                Boolean value = Boolean.parseBoolean(args[0]);
+                plugin.getSave().setEvent(value);
+                plugin.save();
+            } catch (IllegalArgumentException iae) {
+                throw new CommandWarn("Not a boolean: " + args[0]);
+            }
+        }
+        sender.sendMessage(plugin.getSave().isEvent()
+                           ? text("Event mode enabled", GREEN)
+                           : text("Event mode disabled", RED));
         return true;
     }
 
@@ -217,5 +235,29 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
                                 + ": " + String.join(" ", args),
                                 YELLOW));
         return true;
+    }
+
+    private void scoreReset(CommandSender sender) {
+        plugin.getSave().getScore().clear();
+        plugin.getSave().getGoals().clear();
+        plugin.getSave().getAssists().clear();
+        plugin.save();
+        sender.sendMessage(text("All scores were reset", AQUA));
+    }
+
+    private boolean scoreAdd(CommandSender sender, String[] args) {
+        if (args.length != 2) return false;
+        PlayerCache target = PlayerCache.require(args[0]);
+        int value = CommandArgCompleter.requireInt(args[1], i -> true);
+        plugin.getSave().addScore(target.uuid, value);
+        plugin.computeHighscore();
+        sender.sendMessage(text("Score of " + target.name + " is now "
+                                + plugin.getSave().getScore(target.uuid), AQUA));
+        return true;
+    }
+
+    private void scoreReward(CommandSender sender) {
+        int count = plugin.rewardHighscore();
+        sender.sendMessage(text(count + " highscore(s) rewarded", AQUA));
     }
 }

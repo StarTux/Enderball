@@ -24,7 +24,6 @@ public final class GameState implements Serializable {
     private long kickoffStarted;
     private long goalStarted;
     private long endStarted;
-    private boolean event;
     private boolean manual;
 
     public void prep() {

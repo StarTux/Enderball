@@ -86,6 +86,14 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- PlayerCache -->
+    <dependency>
+      <groupId>com.winthier.playercache</groupId>
+      <artifactId>playercache</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
     <!-- Sidebar -->
     <dependency>
       <groupId>com.cavetale.sidebar</groupId>
@@ -98,6 +106,14 @@
     <dependency>
       <groupId>com.cavetale.mytems</groupId>
       <artifactId>mytems</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Fam -->
+    <dependency>
+      <groupId>com.cavetale.fam</groupId>
+      <artifactId>fam</artifactId>
       <version>0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>

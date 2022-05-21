@@ -17,6 +17,7 @@ public final class GameBall implements Serializable {
     private Vec3i blockVector = Vec3i.ZERO;
     private UUID entityUuid = null;
     private UUID lastKicker = null;
+    private UUID assistance = null;
 
     public boolean isEntity() {
         return entityUuid != null;
@@ -67,5 +68,10 @@ public final class GameBall implements Serializable {
         return lastKicker != null
             ? Bukkit.getPlayer(lastKicker)
             : null;
+    }
+
+    public void setLastKicker(UUID uuid) {
+        assistance = lastKicker;
+        this.lastKicker = uuid;
     }
 }

@@ -8,8 +8,6 @@ import com.cavetale.enderball.util.Fireworks;
 import com.cavetale.enderball.util.Gui;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.WardrobeItem;
-import com.cavetale.sidebar.PlayerSidebarEvent;
-import com.cavetale.sidebar.Priority;
 import com.winthier.title.TitlePlugin;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -347,11 +345,22 @@ public final class Game {
             GameTeam playerTeam = getTeam(player);
             chat = player.getName() + " scored a " + (team == playerTeam ? "goal" : "own goal") + " for "
                 + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
-            if (playerTeam == team && state.isEvent()) {
+            if (playerTeam == team && plugin.getSave().isEvent()) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Fußball Striker Goal");
             }
         } else {
             chat = "Goal for " + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
+        }
+        if (plugin.getSave().isEvent()) {
+            if (gameBall.getLastKicker() != null && getTeam(gameBall.getLastKicker()) == team) {
+                plugin.getSave().addScore(gameBall.getLastKicker(), 10);
+                plugin.getSave().addGoals(gameBall.getLastKicker(), 1);
+            }
+            if (gameBall.getAssistance() != null && getTeam(gameBall.getAssistance()) == team) {
+                plugin.getSave().addScore(gameBall.getAssistance(), 5);
+                plugin.getSave().addAssists(gameBall.getLastKicker(), 1);
+            }
+            plugin.computeHighscore();
         }
         Title theTitle = Title.title(title, subtitle, Title.Times.of(Duration.ZERO, Duration.ofSeconds(3), Duration.ZERO));
         for (Player target : getPresentPlayers()) {
@@ -552,6 +561,9 @@ public final class Game {
                 GameTeam team = getTeam(player);
                 if (team == null) continue;
                 dress(player, team);
+                if (plugin.getSave().isEvent()) {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+                }
             }
             state.setKickoffTeam(random.nextInt(2));
             state.setGameStarted(System.currentTimeMillis());
@@ -593,9 +605,6 @@ public final class Game {
                 if (getTeam(player) != null) {
                     clearInventory(player);
                     TitlePlugin.getInstance().setColor(player, null);
-                    if (state.isEvent()) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
-                    }
                 }
             }
             removeAllBalls();
@@ -886,6 +895,9 @@ public final class Game {
         gameBall.setLastKicker(player.getUniqueId());
         fallingBlock.setVelocity(velocity.setX(0).setZ(0));
         fallingBlock.getWorld().playSound(fallingBlock.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.5f);
+        if (plugin.getSave().isEvent()) {
+            plugin.getSave().addScore(player.getUniqueId(), 1);
+        }
     }
 
     public static Component formatTime(long millis) {
@@ -899,22 +911,18 @@ public final class Game {
                     text("s"));
     }
 
-    public void onSidebar(PlayerSidebarEvent event, Player player) {
+    public void onSidebar(Player player, List<Component> lines) {
         if (player.getGameMode() == GameMode.SPECTATOR) return;
         switch (state.getPhase()) {
         case WAIT_FOR_PLAYERS: {
-            Component[] lines = {
-                text("Game starting soon!", GREEN),
-                text("Stand on the playing", YELLOW),
-                text("field to join.", YELLOW),
-            };
-            event.add(plugin, Priority.HIGHEST, lines);
+            lines.addAll(List.of(text("Game starting soon!", GREEN),
+                                 text("Stand on the playing", YELLOW),
+                                 text("field to join.", YELLOW)));
             break;
         }
         case PICK_FLAG: {
             GameTeam team = getTeam(player);
             if (team == null) return;
-            List<Component> lines = new ArrayList<>();
             StringBuilder sb = new StringBuilder(team.chatColor + "Your team:" + ChatColor.WHITE);
             for (Player member : getTeamPlayers(team)) {
                 String name = member.getName();
@@ -926,14 +934,12 @@ public final class Game {
                 }
             }
             if (sb.length() > 0) lines.add(text(sb.toString()));
-            event.add(plugin, Priority.HIGHEST, lines);
             break;
         }
         case KICKOFF: case PLAY: case GOAL: {
             GameTeam team = getTeam(player);
             if (team == null) return;
             Nation nation = getTeamNation(team);
-            List<Component> lines = new ArrayList<>();
             long timeLeft = timeLeft(state.getGameStarted(), GAME_TIME);
             lines.add(join(noSeparators(),
                            text("Time ", GRAY),
@@ -963,7 +969,6 @@ public final class Game {
                 }
             }
             if (sb.length() > 0) lines.add(text(sb.toString()));
-            event.add(plugin, Priority.HIGHEST, lines);
             break;
         }
         default: break;

@@ -1,7 +1,11 @@
 package com.cavetale.enderball;
 
 import com.cavetale.core.event.player.PlayerTeamQuery;
+import com.cavetale.fam.trophy.Highscore;
 import com.cavetale.sidebar.PlayerSidebarEvent;
+import com.cavetale.sidebar.Priority;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
@@ -135,7 +139,14 @@ public final class EventListener implements Listener {
     void onPlayerSidebar(PlayerSidebarEvent event) {
         Player player = event.getPlayer();
         Game game = plugin.getGameAt(player.getLocation());
-        if (game != null) game.onSidebar(event, player);
+        List<Component> lines = new ArrayList<>();
+        if (game != null) {
+            game.onSidebar(player, lines);
+        }
+        if (plugin.getSave().isEvent()) {
+            lines.addAll(Highscore.sidebar(plugin.getHighscore()));
+        }
+        event.add(plugin, Priority.HIGHEST, lines);
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.NORMAL)

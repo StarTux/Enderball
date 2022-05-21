@@ -347,7 +347,7 @@ public final class Game {
         String chat;
         if (player != null) {
             GameTeam playerTeam = getTeam(player);
-            chat = player.getName() + " scored a " + (team == playerTeam ? "goal" : "own goal") + " for "
+            chat = player.getName() + " scored " + (team == playerTeam ? "a goal" : "an own goal") + " for "
                 + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
             if (playerTeam == team && plugin.getSave().isEvent() && !plugin.getSave().isTesting()) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Fußball Striker Goal");

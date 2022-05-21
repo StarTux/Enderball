@@ -146,6 +146,7 @@ public final class EventListener implements Listener {
         if (plugin.getSave().isEvent()) {
             lines.addAll(Highscore.sidebar(plugin.getHighscore()));
         }
+        if (lines.isEmpty()) return;
         event.add(plugin, Priority.HIGHEST, lines);
     }
 

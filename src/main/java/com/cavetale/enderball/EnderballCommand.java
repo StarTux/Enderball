@@ -242,6 +242,7 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         plugin.getSave().getGoals().clear();
         plugin.getSave().getAssists().clear();
         plugin.save();
+        plugin.computeHighscore();
         sender.sendMessage(text("All scores were reset", AQUA));
     }
 

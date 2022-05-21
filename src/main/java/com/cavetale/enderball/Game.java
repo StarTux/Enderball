@@ -356,7 +356,7 @@ public final class Game {
                 plugin.getSave().addScore(gameBall.getLastKicker(), 10);
                 plugin.getSave().addGoals(gameBall.getLastKicker(), 1);
             }
-            if (gameBall.getAssistance() != null && getTeam(gameBall.getAssistance()) == team) {
+            if (gameBall.getAssistance() != null && getTeam(gameBall.getAssistance()) == team && !gameBall.getAssistance().equals(gameBall.getLastKicker())) {
                 plugin.getSave().addScore(gameBall.getAssistance(), 5);
                 plugin.getSave().addAssists(gameBall.getLastKicker(), 1);
             }

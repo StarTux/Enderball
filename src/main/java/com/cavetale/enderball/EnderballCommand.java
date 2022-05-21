@@ -39,6 +39,10 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
             .description("Set event state")
             .completers(CommandArgCompleter.list("true", "false"))
             .senderCaller(this::event);
+        rootNode.addChild("testing").arguments("true|false")
+            .description("Set testing state")
+            .completers(CommandArgCompleter.list("true", "false"))
+            .senderCaller(this::testing);
         rootNode.addChild("manual").arguments("true|false")
             .description("Set manual mode")
             .completers(CommandArgCompleter.list("true", "false"))
@@ -46,10 +50,6 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         rootNode.addChild("tojava").denyTabCompletion()
             .description("Serialize all nation flags to Java")
             .senderCaller(this::toJava);
-        rootNode.addChild("event").arguments("true|false")
-            .description("Set event mode")
-            .completers(CommandArgCompleter.list("true", "false"))
-            .senderCaller(this::event);
         CommandNode teamNode = rootNode.addChild("team")
             .description("Team commands");
         teamNode.addChild("reset").denyTabCompletion()
@@ -189,6 +189,23 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         sender.sendMessage(plugin.getSave().isEvent()
                            ? text("Event mode enabled", GREEN)
                            : text("Event mode disabled", RED));
+        return true;
+    }
+
+    private boolean testing(CommandSender sender, String[] args) {
+        if (args.length > 1) return false;
+        if (args.length == 1) {
+            try {
+                Boolean value = Boolean.parseBoolean(args[0]);
+                plugin.getSave().setTesting(value);
+                plugin.save();
+            } catch (IllegalArgumentException iae) {
+                throw new CommandWarn("Not a boolean: " + args[0]);
+            }
+        }
+        sender.sendMessage(plugin.getSave().isTesting()
+                           ? text("Testing mode enabled", GREEN)
+                           : text("Testing mode disabled", RED));
         return true;
     }
 

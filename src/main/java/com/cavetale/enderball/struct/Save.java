@@ -11,13 +11,14 @@ public final class Save {
     protected Map<UUID, Integer> goals = new HashMap<>();
     protected Map<UUID, Integer> assists = new HashMap<>();
     protected boolean event = false;
+    protected boolean testing = false;
 
     public int getGoals(UUID uuid) {
         return goals.getOrDefault(uuid, 0);
     }
 
     public void addGoals(UUID uuid, int value) {
-        goals.put(uuid, getGoals(uuid) + value);
+        goals.put(uuid, Math.max(0, getGoals(uuid) + value));
     }
 
     public int getScore(UUID uuid) {
@@ -25,7 +26,7 @@ public final class Save {
     }
 
     public void addScore(UUID uuid, int value) {
-        score.put(uuid, getScore(uuid) + value);
+        score.put(uuid, Math.max(0, getScore(uuid) + value));
     }
 
     public int getAssists(UUID uuid) {
@@ -33,6 +34,6 @@ public final class Save {
     }
 
     public void addAssists(UUID uuid, int value) {
-        assists.put(uuid, getAssists(uuid) + value);
+        assists.put(uuid, Math.max(0, getAssists(uuid) + value));
     }
 }

@@ -207,6 +207,10 @@ public final class Game {
         default: break;
         }
         if (state.getPhase() == GamePhase.KICKOFF) newPhase(GamePhase.PLAY);
+        if (plugin.getSave().isEvent()) {
+            plugin.getSave().addScore(player.getUniqueId(), 1);
+            plugin.computeHighscore();
+        }
     }
 
     public void onPlaceBall(Player player, Block block) {
@@ -345,7 +349,7 @@ public final class Game {
             GameTeam playerTeam = getTeam(player);
             chat = player.getName() + " scored a " + (team == playerTeam ? "goal" : "own goal") + " for "
                 + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
-            if (playerTeam == team && plugin.getSave().isEvent()) {
+            if (playerTeam == team && plugin.getSave().isEvent() && !plugin.getSave().isTesting()) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Fußball Striker Goal");
             }
         } else {
@@ -355,10 +359,16 @@ public final class Game {
             if (gameBall.getLastKicker() != null && getTeam(gameBall.getLastKicker()) == team) {
                 plugin.getSave().addScore(gameBall.getLastKicker(), 10);
                 plugin.getSave().addGoals(gameBall.getLastKicker(), 1);
+                if (gameBall.getAssistance() != null
+                    && getTeam(gameBall.getAssistance()) == team
+                    && !gameBall.getAssistance().equals(gameBall.getLastKicker())) {
+                    plugin.getSave().addScore(gameBall.getAssistance(), 5);
+                    plugin.getSave().addAssists(gameBall.getLastKicker(), 1);
+                }
             }
-            if (gameBall.getAssistance() != null && getTeam(gameBall.getAssistance()) == team && !gameBall.getAssistance().equals(gameBall.getLastKicker())) {
-                plugin.getSave().addScore(gameBall.getAssistance(), 5);
-                plugin.getSave().addAssists(gameBall.getLastKicker(), 1);
+            if (gameBall.getLastKicker() != null && getTeam(gameBall.getLastKicker()) != team) {
+                // Own goal penalty
+                plugin.getSave().addScore(gameBall.getLastKicker(), -10);
             }
             plugin.computeHighscore();
         }
@@ -561,7 +571,7 @@ public final class Game {
                 GameTeam team = getTeam(player);
                 if (team == null) continue;
                 dress(player, team);
-                if (plugin.getSave().isEvent()) {
+                if (plugin.getSave().isEvent() && !plugin.getSave().isTesting()) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
                 }
             }
@@ -622,6 +632,12 @@ public final class Game {
             String text;
             Component title;
             if (winnerTeam != null) {
+                if (plugin.getSave().isEvent()) {
+                    for (Player player : getTeamPlayers(winnerTeam)) {
+                        plugin.getSave().addScore(player.getUniqueId(), 3);
+                        plugin.computeHighscore();
+                    }
+                }
                 text = "Team " + winnerTeam.chatColor + getTeamName(winnerTeam) + ChatColor.RESET + " wins!";
                 Nation nation = getTeamNation(winnerTeam);
                 title = text().append(nation.component)
@@ -895,9 +911,6 @@ public final class Game {
         gameBall.setLastKicker(player.getUniqueId());
         fallingBlock.setVelocity(velocity.setX(0).setZ(0));
         fallingBlock.getWorld().playSound(fallingBlock.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.5f);
-        if (plugin.getSave().isEvent()) {
-            plugin.getSave().addScore(player.getUniqueId(), 1);
-        }
     }
 
     public static Component formatTime(long millis) {

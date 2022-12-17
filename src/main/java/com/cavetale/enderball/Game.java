@@ -65,6 +65,7 @@ import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
+import static net.kyori.adventure.title.Title.Times.times;
 
 /**
  * Runtime class of one game.
@@ -372,7 +373,7 @@ public final class Game {
             }
             plugin.computeHighscore();
         }
-        Title theTitle = Title.title(title, subtitle, Title.Times.of(Duration.ZERO, Duration.ofSeconds(3), Duration.ZERO));
+        Title theTitle = Title.title(title, subtitle, times(Duration.ZERO, Duration.ofSeconds(3), Duration.ZERO));
         for (Player target : getPresentPlayers()) {
             target.sendMessage(chat);
             target.showTitle(theTitle);
@@ -588,7 +589,7 @@ public final class Game {
                 .append(nation.component).append(text(nation.name, team.textColor))
                 .build();
             Title title = Title.title(empty(), txt,
-                                      Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO));
+                                      times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO));
             for (Player player : getPresentPlayers()) {
                 player.showTitle(title);
             }
@@ -651,7 +652,7 @@ public final class Game {
                 plugin.getLogger().info("Winner: Draw");
             }
             Title theTitle = Title.title(title, getScoreComponent(),
-                                         Title.Times.of(Duration.ofSeconds(1), Duration.ofSeconds(3), Duration.ofSeconds(1)));
+                                         times(Duration.ofSeconds(1), Duration.ofSeconds(3), Duration.ofSeconds(1)));
             for (Player target : getPresentPlayers()) {
                 target.sendMessage(text);
                 target.showTitle(theTitle);

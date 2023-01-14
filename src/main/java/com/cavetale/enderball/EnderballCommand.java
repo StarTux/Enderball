@@ -4,9 +4,9 @@ import com.cavetale.core.command.AbstractCommand;
 import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
+import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.enderball.struct.Cuboid;
 import com.cavetale.enderball.util.WorldEdit;
-import com.winthier.playercache.PlayerCache;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -53,6 +53,10 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         rootNode.addChild("highlight").denyTabCompletion()
             .description("Highlight the field")
             .playerCaller(this::highlight);
+        rootNode.addChild("kick").arguments("<player>")
+            .description("Kick a player from the game")
+            .completers(CommandArgCompleter.NULL)
+            .playerCaller(this::kick);
         CommandNode teamNode = rootNode.addChild("team")
             .description("Team commands");
         teamNode.addChild("reset").denyTabCompletion()
@@ -186,6 +190,23 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
             }
         }
         player.sendMessage(text("All areas highlighted", AQUA));
+    }
+
+    private boolean kick(Player player, String[] args) {
+        if (args.length != 1) return false;
+        Game game = plugin.getGameAt(player.getLocation());
+        if (game == null) throw new CommandWarn("No game here");
+        PlayerCache playerCache = PlayerCache.require(args[0]);
+        GameTeam team = game.getState().getTeams().remove(playerCache.uuid);
+        if (team == null) {
+            throw new CommandWarn("Player not in team: " + playerCache.name);
+        }
+        Player target = Bukkit.getPlayer(playerCache.uuid);
+        if (target != null) {
+            game.warpOutside(target);
+        }
+        player.sendMessage(text("Player kicked from team " + team.humanName + ": " + target.getName(), YELLOW));
+        return true;
     }
 
     private boolean event(CommandSender sender, String[] args) {

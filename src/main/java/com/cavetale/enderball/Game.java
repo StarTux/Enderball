@@ -172,7 +172,7 @@ public final class Game {
 
     public void onKickBall(Player player, Block block, PlayerInteractEvent event) {
         event.setCancelled(true);
-        //if (state.getPhase() != GamePhase.KICKOFF && state.getPhase() != GamePhase.PLAY) return;
+        if (state.getPhase() != GamePhase.KICKOFF && state.getPhase() != GamePhase.PLAY) return;
         GameTeam team = getTeam(player);
         if (team == null) {
             warpOutside(player);
@@ -666,7 +666,7 @@ public final class Game {
         }
     }
 
-    void tick() {
+    private void tick() {
         if (state.getPhase().isPlaying()) {
             if (hungerTicks++ % 20 == 0) {
                 for (Player player : getPresentPlayers()) {
@@ -759,8 +759,24 @@ public final class Game {
                     entity.getWorld().spawnParticle(Particle.FIREWORKS_SPARK, entity.getLocation(), 1, 0, 0, 0, 0);
                 }
             }
+            for (UUID uuid : List.copyOf(state.getTeams().keySet())) {
+                if (Bukkit.getPlayer(uuid) == null) {
+                    state.getTeams().remove(uuid);
+                }
+            }
             for (Player player : getEligiblePlayers()) {
-                if (getTeam(player) == null) warpOutside(player);
+                if (getTeam(player) == null) {
+                    GameTeam team = countTeamSize(GameTeam.RED) < countTeamSize(GameTeam.BLUE)
+                        ? GameTeam.RED
+                        : GameTeam.BLUE;
+                    state.getTeams().put(player.getUniqueId(), team);
+                    dress(player, team);
+                    Nation nation = getTeamNation(team);
+                    player.sendMessage(textOfChildren(text("Welcome to ", WHITE),
+                                                      text("Team ", team.textColor),
+                                                      nation.component,
+                                                      text(nation.name, team.textColor)));
+                }
             }
             break;
         }
@@ -898,6 +914,14 @@ public final class Game {
         return state.getScores().get(team.toIndex());
     }
 
+    public int countTeamSize(GameTeam team) {
+        int result = 0;
+        for (GameTeam it : state.getTeams().values()) {
+            if (it == team) result += 1;
+        }
+        return result;
+    }
+
     protected float clamp1(float in) {
         return Math.max(0, Math.min(1, in));
     }
@@ -977,10 +1001,13 @@ public final class Game {
                     names.add(nation.defaultFont.asComponent());
                 }
                 names.add(text(nation.name, team.textColor));
-                length += nation.name.length() + 5;
-                for (Player member : getTeamPlayers(team)) {
+                List<Player> teamPlayers = getTeamPlayers(team);
+                String count = "(" + teamPlayers.size() + ")";
+                names.add(text(count, GRAY));
+                length += nation.name.length() + 5 + count.length();
+                for (Player member : teamPlayers) {
                     String name = member.getName();
-                    if (length + 1 + name.length() >= 24) {
+                    if (length + 1 + name.length() >= 18) {
                         lines.add(join(noSeparators(), names));
                         names.clear();
                         length = 0;

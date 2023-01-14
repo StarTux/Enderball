@@ -26,4 +26,8 @@ public final class GameBoard implements Serializable {
             spawns = new ArrayList<>(spawns);
         }
     }
+
+    public List<Cuboid> getAllAreas() {
+        return List.of(area, field, new Cuboid(kickoff, kickoff), goals.get(0), goals.get(1), spawns.get(0), spawns.get(1), new Cuboid(outside, outside));
+    }
 }

@@ -2,10 +2,14 @@ package com.cavetale.enderball.struct;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Location;
+import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
 import org.bukkit.util.BoundingBox;
 
 @Getter @RequiredArgsConstructor
@@ -90,5 +94,50 @@ public final class Cuboid {
 
     public boolean contains(BoundingBox bb) {
         return getBoundingBox().contains(bb);
+    }
+
+    public void highlight(Player player) {
+        World world = player.getWorld();
+        highlight(world, location -> {
+                player.spawnParticle(Particle.END_ROD, location, 1, 0.0, 0.0, 0.0, 0.0);
+            });
+    }
+
+    public void highlight(World world, Consumer<Location> callback) {
+        if (!world.isChunkLoaded(min.x >> 4, min.z >> 4)) return;
+        if (!world.isChunkLoaded(max.x >> 4, max.z >> 4)) return;
+        Block a = min.toBlock(world);
+        Block b = max.toBlock(world);
+        final int ax = a.getX();
+        final int ay = a.getY();
+        final int az = a.getZ();
+        final int bx = b.getX();
+        final int by = b.getY();
+        final int bz = b.getZ();
+        Location loc = a.getLocation();
+        int sizeX = bx - ax + 1;
+        int sizeY = by - ay + 1;
+        int sizeZ = bz - az + 1;
+        for (int y = 0; y < sizeY; y += 1) {
+            double dy = (double) y;
+            callback.accept(loc.clone().add(0, dy, 0));
+            callback.accept(loc.clone().add(0, dy, sizeZ));
+            callback.accept(loc.clone().add(sizeX, dy, 0));
+            callback.accept(loc.clone().add(sizeX, dy, sizeZ));
+        }
+        for (int z = 0; z < sizeZ; z += 1) {
+            double dz = (double) z;
+            callback.accept(loc.clone().add(0, 0, dz));
+            callback.accept(loc.clone().add(0, sizeY, dz));
+            callback.accept(loc.clone().add(sizeX, 0, dz));
+            callback.accept(loc.clone().add(sizeX, sizeY, dz));
+        }
+        for (int x = 0; x < sizeX; x += 1) {
+            double dx = (double) x;
+            callback.accept(loc.clone().add(dx, 0, 0));
+            callback.accept(loc.clone().add(dx, 0, sizeZ));
+            callback.accept(loc.clone().add(dx, sizeY, 0));
+            callback.accept(loc.clone().add(dx, sizeY, sizeZ));
+        }
     }
 }

@@ -50,6 +50,9 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         rootNode.addChild("tojava").denyTabCompletion()
             .description("Serialize all nation flags to Java")
             .senderCaller(this::toJava);
+        rootNode.addChild("highlight").denyTabCompletion()
+            .description("Highlight the field")
+            .playerCaller(this::highlight);
         CommandNode teamNode = rootNode.addChild("team")
             .description("Team commands");
         teamNode.addChild("reset").denyTabCompletion()
@@ -173,6 +176,16 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         }
         sender.sendMessage(String.join("\n", lines));
         return true;
+    }
+
+    private void highlight(Player player) {
+        for (Game game : plugin.getGames()) {
+            if (!player.getWorld().equals(game.getWorld())) continue;
+            for (Cuboid cuboid : game.getBoard().getAllAreas()) {
+                cuboid.highlight(player);
+            }
+        }
+        player.sendMessage(text("All areas highlighted", AQUA));
     }
 
     private boolean event(CommandSender sender, String[] args) {

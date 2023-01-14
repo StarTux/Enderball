@@ -768,7 +768,7 @@ public final class Game {
         case PLAY: {
             for (GameBall gameBall : new ArrayList<>(state.getBalls())) {
                 if (!gameBall.getKicks().isEmpty() && gameBall.getKickCooldown() <= System.currentTimeMillis()) {
-                    List<UUID> uuids = List.copyOf(gameBall.getKicks().keySet());
+                    List<UUID> uuids = new ArrayList<>(gameBall.getKicks().keySet());
                     uuids.removeIf(u -> Bukkit.getPlayer(u) == null || getTeam(u) == null);
                     if (!uuids.isEmpty()) {
                         UUID uuid = uuids.get(random.nextInt(uuids.size()));

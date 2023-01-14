@@ -57,6 +57,9 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
             .description("Kick a player from the game")
             .completers(CommandArgCompleter.NULL)
             .playerCaller(this::kick);
+        rootNode.addChild("skip").denyTabCompletion()
+            .description("Skip cooldowns")
+            .playerCaller(this::skip);
         CommandNode teamNode = rootNode.addChild("team")
             .description("Team commands");
         teamNode.addChild("reset").denyTabCompletion()
@@ -207,6 +210,13 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         }
         player.sendMessage(text("Player kicked from team " + team.humanName + ": " + target.getName(), YELLOW));
         return true;
+    }
+
+    private void skip(Player player) {
+        Game game = plugin.getGameAt(player.getLocation());
+        if (game == null) throw new CommandWarn("No game here");
+        game.setSkip(true);
+        player.sendMessage(text("Skipping...", YELLOW));
     }
 
     private boolean event(CommandSender sender, String[] args) {

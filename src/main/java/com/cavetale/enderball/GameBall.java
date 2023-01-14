@@ -2,9 +2,12 @@ package com.cavetale.enderball;
 
 import com.cavetale.enderball.struct.Vec3i;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import lombok.Data;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -18,6 +21,8 @@ public final class GameBall implements Serializable {
     private UUID entityUuid = null;
     private UUID lastKicker = null;
     private UUID assistance = null;
+    private long kickCooldown;
+    private final Map<UUID, Kick> kicks = new HashMap<>();
 
     public boolean isEntity() {
         return entityUuid != null;
@@ -73,5 +78,11 @@ public final class GameBall implements Serializable {
     public void setLastKicker(UUID uuid) {
         assistance = lastKicker;
         this.lastKicker = uuid;
+    }
+
+    public Location getLocation(World world) {
+        return entityUuid != null
+            ? getEntity().getLocation()
+            : getBlock(world).getLocation().add(0.0, 0.5, 0.0);
     }
 }

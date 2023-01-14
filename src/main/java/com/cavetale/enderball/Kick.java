@@ -1,8 +1,18 @@
 package com.cavetale.enderball;
 
+import lombok.Value;
+import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
+import org.bukkit.util.Vector;
 
+@Value
 public class Kick {
+    protected final Player player;
+    protected final GameBall ball;
+    protected final Strength strength;
+    protected final Height height;
+    protected final Vector vector;
+
     public enum Strength {
         SHORT(0.7),
         LONG(1.0);

@@ -23,6 +23,7 @@ import java.util.Random;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -85,6 +86,7 @@ public final class Game {
     private int hungerTicks = 0;
     private int fireworkTicks = 0;
     private final Map<UUID, Nation> nationVotes = new HashMap<>();
+    @Setter private boolean skip;
 
     public void enable() {
         board.prep();
@@ -179,21 +181,37 @@ public final class Game {
             return;
         }
         if (state.getPhase() == GamePhase.KICKOFF && state.getKickoffTeam() != team.toIndex()) return;
-        GameBall gameBall = getOrCreateBall(block);
+        GameBall ball = getOrCreateBall(block);
         Kick.Strength strength = player.isSprinting() ? Kick.Strength.LONG : Kick.Strength.SHORT;
         Kick.Height height = Kick.Height.of(event.getAction());
+        Vector vector = player.getLocation().getDirection();
+        double rnd = (0.25 * (random.nextDouble() - random.nextDouble())) + 1.0;
+        vector.setY(0.0).normalize().setY(height.height).multiply(strength.strength * rnd);
+        Kick kick = new Kick(player, ball, strength, height, vector);
+        if (ball.getKickCooldown() > System.currentTimeMillis()) {
+            ball.getKicks().put(player.getUniqueId(), kick);
+        } else {
+            kick(kick);
+        }
+    }
+
+    /**
+     * Perform a kick.  This could be delayed due to the kick
+     * cooldown.
+     */
+    private void kick(Kick kick) {
+        if (!kick.ball.isBlock()) return;
+        Player player = kick.player;
+        Block block = kick.ball.getBlock(getWorld());
         block.setType(Material.AIR, false);
         Location ballLocation = block.getLocation().add(0.5, 0.0, 0.5);
-        Vector vec = ballLocation.toVector().subtract(player.getLocation().toVector());
-        double rnd = (0.25 * (random.nextDouble() - random.nextDouble())) + 1.0;
-        vec.setY(0.0).normalize().setY(height.height).multiply(strength.strength * rnd);
-        FallingBlock fallingBlock = block.getWorld().spawnFallingBlock(ballLocation, Material.DRAGON_EGG.createBlockData());
+        FallingBlock fallingBlock = ballLocation.getWorld().spawnFallingBlock(ballLocation, Material.DRAGON_EGG.createBlockData());
         fallingBlock.setDropItem(true);
-        fallingBlock.setVelocity(vec);
+        fallingBlock.setVelocity(kick.vector);
         fallingBlock.setGlowing(true);
-        gameBall.setEntityUuid(fallingBlock.getUniqueId());
-        gameBall.setLastKicker(player.getUniqueId());
-        switch (strength) {
+        kick.ball.setEntityUuid(fallingBlock.getUniqueId());
+        kick.ball.setLastKicker(player.getUniqueId());
+        switch (kick.strength) {
         case SHORT:
             ballLocation.getWorld().playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 2.0f);
             player.setFoodLevel(Math.max(0, player.getFoodLevel() - 5));
@@ -258,11 +276,15 @@ public final class Game {
         }
         gameBall.setEntityUuid(null);
         gameBall.setLastKicker(null);
+        gameBall.getKicks().clear();
+        gameBall.setKickCooldown(System.currentTimeMillis() + 500L);
     }
 
     public void onBallFall(FallingBlock entity, Block block, EntityChangeBlockEvent event) {
         GameBall gameBall = getOrCreateBall(block);
         gameBall.setEntityUuid(entity.getUniqueId());
+        gameBall.getKicks().clear();
+        gameBall.setKickCooldown(0);
     }
 
     public void onBallBreak(FallingBlock entity, EntityDropItemEvent event) {
@@ -689,7 +711,8 @@ public final class Game {
             }
             long total = 60000;
             long timeLeft = timeLeft(state.getWaitForPlayersStarted(), total);
-            if (timeLeft <= 0) {
+            if (timeLeft <= 0 || skip) {
+                skip = false;
                 if (state.isManual()) {
                     newPhase(GamePhase.KICKOFF);
                 } else {
@@ -706,7 +729,8 @@ public final class Game {
             bossBar.progress(clamp1((float) timeLeft / (float) total));
             int playerCount = state.getTeams().size();
             int votesCast = nationVotes.size();
-            if (timeLeft <= 0 || votesCast >= playerCount) {
+            if (timeLeft <= 0 || votesCast >= playerCount || skip) {
+                skip = false;
                 for (Player player : getEligiblePlayers()) {
                     GameTeam team = getTeam(player);
                     if (team == null) continue;
@@ -730,7 +754,8 @@ public final class Game {
         case KICKOFF: {
             long total = 30000;
             long timeLeft = timeLeft(state.getKickoffStarted(), total);
-            if (timeLeft <= 0) {
+            if (timeLeft <= 0 || skip) {
+                skip = false;
                 newPhase(GamePhase.PLAY);
             } else {
                 bossBar.progress(clamp1((float) timeLeft / (float) total));
@@ -739,6 +764,18 @@ public final class Game {
         }
         case PLAY: {
             for (GameBall gameBall : new ArrayList<>(state.getBalls())) {
+                if (!gameBall.getKicks().isEmpty() && gameBall.getKickCooldown() <= System.currentTimeMillis()) {
+                    List<UUID> uuids = List.copyOf(gameBall.getKicks().keySet());
+                    uuids.removeIf(u -> Bukkit.getPlayer(u) == null || getTeam(u) == null);
+                    if (!uuids.isEmpty()) {
+                        UUID uuid = uuids.get(random.nextInt(uuids.size()));
+                        Kick kick = gameBall.getKicks().get(uuid);
+                        kick(kick);
+                    }
+                    gameBall.getKicks().clear();
+                    gameBall.setKickCooldown(0L);
+                    continue;
+                }
                 FallingBlock fallingBlock = gameBall.getEntity();
                 if (fallingBlock != null) {
                     gameBall.setBlockVector(Vec3i.of(fallingBlock.getLocation()));
@@ -770,6 +807,10 @@ public final class Game {
                         ? GameTeam.RED
                         : GameTeam.BLUE;
                     state.getTeams().put(player.getUniqueId(), team);
+                    player.setGameMode(GameMode.SURVIVAL);
+                    player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+                    player.setFoodLevel(20);
+                    player.setSaturation(20.0f);
                     dress(player, team);
                     Nation nation = getTeamNation(team);
                     player.sendMessage(textOfChildren(text("Welcome to ", WHITE),

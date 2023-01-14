@@ -88,7 +88,10 @@ public enum Nation {
     ROMANIA("Romania", "H4sIAAAAAAAA/1XMuwoCMRCF4bMbxZiFLS18FEsvvYXYyhjjGowTmIyIb+8KFrE4xc8HxwEG3ZaUjkFKzAy4pUUbL1g8IgcvdNXV6xY1nM7EHMTBKA0O/Tplf9+xRn0faJjD7kk1CBeH8dRi9mu0qRhMNzllGaVDTb6myR9JTf245ptP1gYfViSH67YAAAA=",
             null),
     BULGARIA("Bulgaria", "H4sIAAAAAAAA/03JuwoCMRBG4X8TFmOELS18FEsvvYXYyhjHNbhOYDIivr0rWGxxisMXAY/FjoxOrDUXAeIqwOUrls8snJRutn7fs/H5QiKsEd6oj+g2Q0mPvVi2z5H6OcKBzFilRgAuYPZ/uFQ92m0Zio7SYko6pW6s+e1LrMEXuQZ0RJsAAAA=",
-             null);
+             null),
+    ARGENTINA("Argentina", "H4sIAAAAAAAA/43JsQrCMBRG4b9NxRjFF/BNHLXdHcS13MY0BuMNJLeDr+ETS8HBSTzb4TOAwroloYvLJSQGNi+NOlyxewR2NtMo+xj8TfohTq4fiNllAyXkDbaHmOy9YwnyPJNfQZ9IxGUuBkCjsfw8alsUFscUU8bcf6TGmL6s+WlANe/EUuENbFXwAdgAAAA=",
+              DefaultFont.ARGENTINA),
+    ;
 
     public final String name;
     public final String base64;

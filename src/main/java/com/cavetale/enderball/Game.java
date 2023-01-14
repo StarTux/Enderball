@@ -1035,7 +1035,10 @@ public final class Game {
             lines.add(textOfChildren(theTeam.chatBlock, Mytems.MOUSE_LEFT, text(" High Kick", GRAY)));
             lines.add(textOfChildren(theTeam.chatBlock, Mytems.MOUSE_RIGHT, text(" Shallow Kick", GRAY)));
             lines.add(textOfChildren(theTeam.chatBlock, VanillaEffects.SPEED, text(" More Power", GRAY)));
-            for (GameTeam team : GameTeam.values()) {
+            List<GameTeam> order = theTeam == GameTeam.RED
+                ? List.of(GameTeam.RED, GameTeam.BLUE)
+                : List.of(GameTeam.BLUE, GameTeam.RED);
+            for (GameTeam team : order) {
                 Nation nation = getTeamNation(team);
                 List<Component> names = new ArrayList<>();
                 int length = 0;
@@ -1051,7 +1054,7 @@ public final class Game {
                 length += nation.name.length() + 5 + count.length();
                 for (Player member : teamPlayers) {
                     String name = member.getName();
-                    if (length + 1 + name.length() >= 18) {
+                    if (length + 1 + name.length() >= 22) {
                         lines.add(join(noSeparators(), names));
                         names.clear();
                         length = 0;

@@ -87,6 +87,7 @@ public final class Game {
     private int fireworkTicks = 0;
     private final Map<UUID, Nation> nationVotes = new HashMap<>();
     @Setter private boolean skip;
+    public static final List<String> TITLES = List.of("Fußball", "Striker", "Goal", "Soccer");
 
     public void enable() {
         board.prep();
@@ -376,7 +377,9 @@ public final class Game {
             chat = player.getName() + " scored " + (team == playerTeam ? "a goal" : "an own goal") + " for "
                 + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
             if (playerTeam == team && plugin.getSave().isEvent() && !plugin.getSave().isTesting()) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Fußball Striker Goal");
+                String cmd = "titles unlockset " + player.getName() + " " + String.join(" ", TITLES);
+                plugin.getLogger().info("Running command: " + cmd);
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
             }
         } else {
             chat = "Goal for " + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";

@@ -687,7 +687,7 @@ public final class Game {
                 state.setWaitForPlayersStarted(System.currentTimeMillis());
                 return;
             }
-            long total = 30000;
+            long total = 60000;
             long timeLeft = timeLeft(state.getWaitForPlayersStarted(), total);
             if (timeLeft <= 0) {
                 if (state.isManual()) {
@@ -701,7 +701,7 @@ public final class Game {
             break;
         }
         case PICK_FLAG: {
-            long total = 30000;
+            long total = 60000;
             long timeLeft = timeLeft(state.getPickFlagStarted(), total);
             bossBar.progress(clamp1((float) timeLeft / (float) total));
             int playerCount = state.getTeams().size();
@@ -836,12 +836,15 @@ public final class Game {
     }
 
     protected void updateNationGui(Player player, Gui gui, GameTeam team) {
-        for (Nation nation : Nation.values()) {
-            int slot = nation.ordinal();
+        List<Nation> nations = new ArrayList<>();
+        for (Nation nation : Nation.values()) nations.add(nation);
+        nations.sort((a, b) -> a.name.compareToIgnoreCase(b.name));
+        int nextSlot = 0;
+        for (Nation nation : nations) {
             int votes = countNationVotes(nation, team);
             ItemStack item = nation.bannerItem.clone();
             item.setAmount(Math.max(1, Math.min(64, 1 + votes)));
-            gui.setItem(slot, item, click -> {
+            gui.setItem(nextSlot++, item, click -> {
                     if (state.getPhase() != GamePhase.PICK_FLAG) return;
                     nationVotes.put(player.getUniqueId(), nation);
                     Bukkit.getScheduler().runTask(plugin, () -> {

@@ -91,6 +91,7 @@ public enum Nation {
              null),
     ARGENTINA("Argentina", "H4sIAAAAAAAA/43JsQrCMBRG4b9NxRjFF/BNHLXdHcS13MY0BuMNJLeDr+ETS8HBSTzb4TOAwroloYvLJSQGNi+NOlyxewR2NtMo+xj8TfohTq4fiNllAyXkDbaHmOy9YwnyPJNfQZ9IxGUuBkCjsfw8alsUFscUU8bcf6TGmL6s+WlANe/EUuENbFXwAdgAAAA=",
               DefaultFont.ARGENTINA),
+    JAPAN("Japan", "H4sIAAAAAAAA/43LvQrCMBTF8dNGMUbp6MM4+rE7iKvcxthc2t5AekV8DZ9YCg5182x/fhwHGKwOpHQJeeAkwPptUfINm54l+Ex33T4ja7jWJBKyg1FqHKpdl3x7FGV9nalZwp5INWQZHICZxeLbMDHWBvN96lLGuImVvZ9Q9UMx/vsCijEfogU+I9VCK9IAAAA=", DefaultFont.JAPAN),
     ;
 
     public final String name;

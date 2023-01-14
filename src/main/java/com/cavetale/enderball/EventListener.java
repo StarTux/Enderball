@@ -1,9 +1,9 @@
 package com.cavetale.enderball;
 
+import com.cavetale.core.event.hud.PlayerHudEvent;
+import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.event.player.PlayerTeamQuery;
 import com.cavetale.fam.trophy.Highscore;
-import com.cavetale.sidebar.PlayerSidebarEvent;
-import com.cavetale.sidebar.Priority;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -136,7 +136,7 @@ public final class EventListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.NORMAL)
-    void onPlayerSidebar(PlayerSidebarEvent event) {
+    private void onPlayerHud(PlayerHudEvent event) {
         Player player = event.getPlayer();
         Game game = plugin.getGameAt(player.getLocation());
         List<Component> lines = new ArrayList<>();
@@ -147,7 +147,8 @@ public final class EventListener implements Listener {
             lines.addAll(Highscore.sidebar(plugin.getHighscore()));
         }
         if (lines.isEmpty()) return;
-        event.add(plugin, Priority.HIGHEST, lines);
+        event.sidebar(PlayerHudPriority.HIGHEST, lines);
+        event.bossbar(PlayerHudPriority.HIGH, game.getBossBar());
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.NORMAL)

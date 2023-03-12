@@ -909,7 +909,9 @@ public final class Game {
         int nextSlot = 0;
         for (Nation nation : nations) {
             int votes = countNationVotes(nation, team);
-            ItemStack item = nation.bannerItem.clone();
+            ItemStack item = nation.mytems != null
+                ? nation.mytems.createIcon(List.of(text(nation.name, WHITE)))
+                : nation.bannerItem.clone();
             item.setAmount(Math.max(1, Math.min(64, 1 + votes)));
             gui.setItem(nextSlot++, item, click -> {
                     if (state.getPhase() != GamePhase.PICK_FLAG) return;
@@ -1043,9 +1045,9 @@ public final class Game {
                 List<Component> names = new ArrayList<>();
                 int length = 0;
                 names.add(text("Team ", team.textColor));
-                if (nation.defaultFont != null) {
+                if (nation.mytems != null) {
                     length += 2;
-                    names.add(nation.defaultFont.asComponent());
+                    names.add(nation.mytems.asComponent());
                 }
                 names.add(text(nation.name, team.textColor));
                 List<Player> teamPlayers = getTeamPlayers(team);

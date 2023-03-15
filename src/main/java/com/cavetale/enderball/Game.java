@@ -213,14 +213,20 @@ public final class Game {
         kick.ball.setEntityUuid(fallingBlock.getUniqueId());
         kick.ball.setLastKicker(player.getUniqueId());
         switch (kick.strength) {
-        case SHORT:
+        case SHORT: {
             ballLocation.getWorld().playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 2.0f);
-            player.setFoodLevel(Math.max(0, player.getFoodLevel() - 5));
+            final int food = Math.max(0, player.getFoodLevel() - 5);
+            player.setFoodLevel(food);
+            player.setSaturation((float) food);
             break;
-        case LONG:
+        }
+        case LONG: {
             ballLocation.getWorld().playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.66f);
-            player.setFoodLevel(Math.max(0, player.getFoodLevel() - 10));
+            final int food = Math.max(0, player.getFoodLevel() - 10);
+            player.setFoodLevel(food);
+            player.setSaturation((float) food);
             break;
+        }
         default: break;
         }
         if (state.getPhase() == GamePhase.KICKOFF) newPhase(GamePhase.PLAY);
@@ -696,11 +702,11 @@ public final class Game {
             if (hungerTicks++ % 20 == 0) {
                 for (Player player : getPresentPlayers()) {
                     if (getTeam(player) == null) continue;
-                    if (player.isSprinting()) {
-                        player.setFoodLevel(Math.max(0, player.getFoodLevel() - 1));
-                    } else {
-                        player.setFoodLevel(Math.min(20, player.getFoodLevel() + 2));
-                    }
+                    final int food = player.isSprinting()
+                        ? Math.max(0, player.getFoodLevel() - 1)
+                        : Math.min(20, player.getFoodLevel() + 2);
+                    player.setFoodLevel(food);
+                    player.setSaturation((float) food);
                 }
             }
         }
@@ -825,7 +831,7 @@ public final class Game {
             break;
         }
         case GOAL: {
-            long total = 1000L * 10L;
+            long total = 1000L * 20L;
             long timeLeft = timeLeft(state.getGoalStarted(), total);
             if (timeLeft <= 0) {
                 newPhase(GamePhase.KICKOFF);

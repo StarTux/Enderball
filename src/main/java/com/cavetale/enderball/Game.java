@@ -812,6 +812,7 @@ public final class Game {
             }
             for (Player player : getEligiblePlayers()) {
                 if (getTeam(player) == null) {
+                    // Late Joining
                     GameTeam team = countTeamSize(GameTeam.RED) < countTeamSize(GameTeam.BLUE)
                         ? GameTeam.RED
                         : GameTeam.BLUE;
@@ -821,11 +822,19 @@ public final class Game {
                     player.setFoodLevel(20);
                     player.setSaturation(20.0f);
                     dress(player, team);
+                    if (plugin.getSave().isEvent() && !plugin.getSave().isTesting()) {
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+                    }
                     Nation nation = getTeamNation(team);
                     player.sendMessage(textOfChildren(text("Welcome to ", WHITE),
                                                       text("Team ", team.textColor),
                                                       nation.component,
                                                       text(nation.name, team.textColor)));
+                    for (Player other : getPresentPlayers()) {
+                        other.sendMessage(textOfChildren(text(player.getName() + " joined ", team.textColor),
+                                                         nation.component,
+                                                         text(nation.name, team.textColor)));
+                    }
                 }
             }
             break;

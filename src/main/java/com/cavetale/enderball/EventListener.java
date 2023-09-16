@@ -169,7 +169,7 @@ public final class EventListener implements Listener {
                 Component teamDisplayName = Component.join(JoinConfiguration.noSeparators(),
                                                            nation.component,
                                                            Component.text(nation.name, gameTeam.textColor));
-                PlayerTeamQuery.Team team = new PlayerTeamQuery.Team(teamName, teamDisplayName);
+                PlayerTeamQuery.Team team = new PlayerTeamQuery.Team(teamName, teamDisplayName, gameTeam.textColor);
                 for (Player player : game.getTeamPlayers(gameTeam)) {
                     query.setTeam(player, team);
                 }

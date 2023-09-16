@@ -143,7 +143,7 @@ public final class EventListener implements Listener {
         if (game != null) {
             game.onSidebar(player, lines);
         }
-        if (plugin.getSave().isEvent()) {
+        if (plugin.getSave().isEvent() && !plugin.getGame().getState().getPhase().isPlaying()) {
             lines.addAll(Highscore.sidebar(plugin.getHighscore()));
         }
         if (lines.isEmpty()) return;

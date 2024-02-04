@@ -89,7 +89,7 @@ public final class EnderballPlugin extends JavaPlugin {
     public int rewardHighscore() {
         return Highscore.reward(save.getScore(),
                                 "enderball_event",
-                                TrophyCategory.CUP,
+                                TrophyCategory.ENDERBALL,
                                 text("Enderball", LIGHT_PURPLE),
                                 hi -> {
                                     int goals = save.getGoals(hi.uuid);

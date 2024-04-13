@@ -2,6 +2,7 @@ package com.cavetale.enderball;
 
 import com.cavetale.core.font.GuiOverlay;
 import com.cavetale.core.font.VanillaEffects;
+import com.cavetale.core.money.Money;
 import com.cavetale.core.util.Json;
 import com.cavetale.enderball.struct.Cuboid;
 import com.cavetale.enderball.struct.Vec3i;
@@ -394,11 +395,13 @@ public final class Game {
             if (gameBall.getLastKicker() != null && getTeam(gameBall.getLastKicker()) == team) {
                 plugin.getSave().addScore(gameBall.getLastKicker(), 10);
                 plugin.getSave().addGoals(gameBall.getLastKicker(), 1);
+                Money.get().give(gameBall.getLastKicker(), 1000.0, plugin, "Enderball Goal");
                 if (gameBall.getAssistance() != null
                     && getTeam(gameBall.getAssistance()) == team
                     && !gameBall.getAssistance().equals(gameBall.getLastKicker())) {
                     plugin.getSave().addScore(gameBall.getAssistance(), 5);
                     plugin.getSave().addAssists(gameBall.getLastKicker(), 1);
+                    Money.get().give(gameBall.getAssistance(), 500, plugin, "Enderball Goal Assist");
                 }
             }
             if (gameBall.getLastKicker() != null && getTeam(gameBall.getLastKicker()) != team) {
@@ -667,9 +670,10 @@ public final class Game {
             if (winnerTeam != null) {
                 if (plugin.getSave().isEvent()) {
                     for (Player player : getTeamPlayers(winnerTeam)) {
+                        Money.get().give(player.getUniqueId(), 1000.0, plugin, "Enderball Victory");
                         plugin.getSave().addScore(player.getUniqueId(), 3);
-                        plugin.computeHighscore();
                     }
+                    plugin.computeHighscore();
                 }
                 text = "Team " + winnerTeam.chatColor + getTeamName(winnerTeam) + ChatColor.RESET + " wins!";
                 Nation nation = getTeamNation(winnerTeam);

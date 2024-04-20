@@ -88,7 +88,7 @@ public final class Game {
     private int fireworkTicks = 0;
     private final Map<UUID, Nation> nationVotes = new HashMap<>();
     @Setter private boolean skip;
-    public static final List<String> TITLES = List.of("Fußball", "Striker", "Goal", "Soccer");
+    public static final List<String> TITLES = List.of("Fußball", "Striker", "Goal", "Soccer", "EnderballChampion");
 
     public void enable() {
         board.prep();

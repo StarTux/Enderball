@@ -45,7 +45,7 @@ public final class Items {
 
     public static void glow(ItemStack itemStack) {
         ItemMeta meta = itemStack.getItemMeta();
-        meta.addEnchant(Enchantment.DURABILITY, 1, true);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         meta.addItemFlags(ItemFlag.values());
         itemStack.setItemMeta(meta);
     }

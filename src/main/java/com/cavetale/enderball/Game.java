@@ -207,7 +207,7 @@ public final class Game {
         Block block = kick.ball.getBlock(getWorld());
         block.setType(Material.AIR, false);
         Location ballLocation = block.getLocation().add(0.5, 0.0, 0.5);
-        FallingBlock fallingBlock = ballLocation.getWorld().spawnFallingBlock(ballLocation, Material.DRAGON_EGG.createBlockData());
+        FallingBlock fallingBlock = ballLocation.getWorld().spawn(ballLocation, FallingBlock.class, e -> e.setBlockData(Material.DRAGON_EGG.createBlockData()));
         fallingBlock.setDropItem(true);
         fallingBlock.setVelocity(kick.vector);
         fallingBlock.setGlowing(true);
@@ -806,7 +806,7 @@ public final class Game {
                 if (ball.isEntity()) {
                     FallingBlock entity = ball.getEntity();
                     if (entity == null) continue;
-                    entity.getWorld().spawnParticle(Particle.FIREWORKS_SPARK, entity.getLocation(), 1, 0, 0, 0, 0);
+                    entity.getWorld().spawnParticle(Particle.FIREWORK, entity.getLocation(), 1, 0, 0, 0, 0);
                 }
             }
             for (UUID uuid : List.copyOf(state.getTeams().keySet())) {

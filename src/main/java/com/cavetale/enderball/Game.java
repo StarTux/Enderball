@@ -568,7 +568,7 @@ public final class Game {
                 location.setDirection(lookAt);
                 player.teleport(location, TeleportCause.PLUGIN);
                 player.setGameMode(GameMode.SURVIVAL);
-                player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+                player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
                 player.setFoodLevel(20);
                 player.setSaturation(20.0f);
             }
@@ -822,7 +822,7 @@ public final class Game {
                         : GameTeam.BLUE;
                     state.getTeams().put(player.getUniqueId(), team);
                     player.setGameMode(GameMode.SURVIVAL);
-                    player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+                    player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
                     player.setFoodLevel(20);
                     player.setSaturation(20.0f);
                     dress(player, team);

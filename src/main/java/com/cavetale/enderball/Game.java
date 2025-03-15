@@ -28,10 +28,8 @@ import lombok.Setter;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.DyeColor;
 import org.bukkit.GameMode;
@@ -70,6 +68,7 @@ import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
+import static net.kyori.adventure.text.format.TextDecoration.BOLD;
 import static net.kyori.adventure.title.Title.Times.times;
 
 /**
@@ -359,9 +358,9 @@ public final class Game {
                                ? GameTeam.RED.chatBlock
                                : a.component),
                               space(),
-                              text("" + state.getScores().get(0), GameTeam.RED.textColor, TextDecoration.BOLD),
+                              text("" + state.getScores().get(0), GameTeam.RED.textColor, BOLD),
                               text(" : ", WHITE),
-                              text("" + state.getScores().get(1), GameTeam.BLUE.textColor, TextDecoration.BOLD),
+                              text("" + state.getScores().get(1), GameTeam.BLUE.textColor, BOLD),
                               space(),
                               (empty().equals(b.component)
                                ? GameTeam.BLUE.chatBlock
@@ -369,7 +368,7 @@ public final class Game {
                               text(b.name, GameTeam.BLUE.textColor));
     }
 
-    void scoreGoal(GameTeam goal, GameBall gameBall) {
+    private void scoreGoal(GameTeam goal, GameBall gameBall) {
         removeAllBalls();
         if (state.getPhase() != GamePhase.PLAY) return;
         GameTeam team = goal.other();
@@ -378,18 +377,19 @@ public final class Game {
         Player player = gameBall.getLastKickerPlayer();
         Component title = text("Goal!", team.textColor);
         Component subtitle = getScoreComponent();
-        String chat;
+        Component chat;
         if (player != null) {
             GameTeam playerTeam = getTeam(player);
-            chat = player.getName() + " scored " + (team == playerTeam ? "a goal" : "an own goal") + " for "
-                + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
+            chat = textOfChildren(text(player.getName() + " scored " + (team == playerTeam ? "a goal" : "an own goal") + " for ", WHITE),
+                                  text(getTeamName(team) + "!", team.textColor, BOLD));
             if (playerTeam == team && plugin.getSave().isEvent() && !plugin.getSave().isTesting()) {
                 String cmd = "titles unlockset " + player.getName() + " " + String.join(" ", TITLES);
                 plugin.getLogger().info("Running command: " + cmd);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
             }
         } else {
-            chat = "Goal for " + team.chatColor + ChatColor.BOLD + getTeamName(team) + "!";
+            chat = textOfChildren(text("Goal for ", WHITE),
+                                  text(getTeamName(team) + "!", team.textColor, BOLD));
         }
         if (plugin.getSave().isEvent()) {
             if (gameBall.getLastKicker() != null && getTeam(gameBall.getLastKicker()) == team) {
@@ -416,7 +416,7 @@ public final class Game {
             target.showTitle(theTitle);
         }
         plugin.getLogger().info("Goal for " + team + ": " + (player != null ? player.getName() : "null"));
-        bossBar.name(text(chat));
+        bossBar.name(chat);
         state.setKickoffTeam(goal.toIndex());
         if (Math.abs(getScore(GameTeam.RED) - getScore(GameTeam.BLUE)) >= 3) {
             newPhase(GamePhase.END);
@@ -574,7 +574,8 @@ public final class Game {
         }
         for (Player player : players) {
             GameTeam team = getTeam(player);
-            player.sendMessage("You play for team " + team.chatColor + getTeamName(team));
+            player.sendMessage(textOfChildren(text("You play for team ", WHITE),
+                                              text(getTeamName(team), team.textColor)));
             plugin.getLogger().info(player.getName() + " plays on team " + getTeamName(team));
         }
         teleportPlayersStartLocations(players);
@@ -670,7 +671,7 @@ public final class Game {
             } else {
                 winnerTeam = null;
             }
-            String text;
+            Component text;
             Component title;
             if (winnerTeam != null) {
                 if (plugin.getSave().isEvent()) {
@@ -680,14 +681,16 @@ public final class Game {
                     }
                     plugin.computeHighscore();
                 }
-                text = "Team " + winnerTeam.chatColor + getTeamName(winnerTeam) + ChatColor.RESET + " wins!";
+                text = textOfChildren(text("Team ", WHITE),
+                                      text(getTeamName(winnerTeam), winnerTeam.textColor),
+                                      text(" wins!", WHITE));
                 Nation nation = getTeamNation(winnerTeam);
                 title = textOfChildren(nation.component,
                                        text(nation.name, winnerTeam.textColor),
                                        text(" Wins!", WHITE));
                 plugin.getLogger().info("Winner: " + getTeamName(winnerTeam));
             } else {
-                text = "It's a draw!";
+                text = text("It's a draw!", WHITE);
                 title = text("Draw", GRAY);
                 plugin.getLogger().info("Winner: Draw");
             }
@@ -1041,17 +1044,22 @@ public final class Game {
         case PICK_FLAG: {
             GameTeam team = getTeam(player);
             if (team == null) return;
-            StringBuilder sb = new StringBuilder(team.chatColor + "Your team:" + ChatColor.WHITE);
+            final List<Component> line = new ArrayList<>();
+            line.add(text("Your team:", team.textColor));
+            int length = 10;
             for (Player member : getTeamPlayers(team)) {
                 String name = member.getName();
-                if (sb.length() + 1 + name.length() >= 24) {
-                    lines.add(text(sb.toString()));
-                    sb = new StringBuilder(name);
+                if (length + 1 + name.length() >= 24) {
+                    lines.add(join(noSeparators(), line));
+                    line.clear();
+                    line.add(text(name, WHITE));
+                    length = name.length();
                 } else {
-                    sb.append(" ").append(name);
+                    line.add(text(" " + name, WHITE));
+                    length += 1 + name.length();
                 }
             }
-            if (sb.length() > 0) lines.add(text(sb.toString()));
+            if (!line.isEmpty()) lines.add(join(noSeparators(), line));
             break;
         }
         case KICKOFF: case PLAY: case GOAL: {

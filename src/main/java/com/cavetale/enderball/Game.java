@@ -466,6 +466,28 @@ public final class Game {
         player.teleport(board.getOutside().toLocation(getWorld()), TeleportCause.PLUGIN);
     }
 
+    public void teleportPlayersStartLocations(List<Player> players) {
+        final Location spawn = board.getKickoff().toLocation(getWorld());
+        for (int i = 0; i < 2; i += 1) {
+            final GameTeam team = GameTeam.of(i);
+            final List<Vec3i> spawns = board.getSpawns().get(i).enumerate();
+            Collections.shuffle(spawns);
+            // Bug: We assume there are enough spawns for all players!
+            final Iterator<Vec3i> iter = spawns.iterator();
+            for (Player player : players) {
+                if (getTeam(player) != team) continue;
+                final Location location = iter.next().toLocation(getWorld());
+                final Vector lookAt = spawn.toVector().subtract(location.toVector()).normalize();
+                location.setDirection(lookAt);
+                player.teleport(location, TeleportCause.PLUGIN);
+                player.setGameMode(GameMode.SURVIVAL);
+                player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
+                player.setFoodLevel(20);
+                player.setSaturation(20.0f);
+            }
+        }
+    }
+
     protected void makeFlags() {
         List<Nation> nations = new ArrayList<>(Arrays.asList(Nation.values()));
         state.setNations(new ArrayList<>());
@@ -555,24 +577,7 @@ public final class Game {
             player.sendMessage("You play for team " + team.chatColor + getTeamName(team));
             plugin.getLogger().info(player.getName() + " plays on team " + getTeamName(team));
         }
-        Location spawn = board.getKickoff().toLocation(getWorld());
-        for (int i = 0; i < 2; i += 1) {
-            GameTeam team = GameTeam.of(i);
-            List<Vec3i> spawns = board.getSpawns().get(i).enumerate();
-            Collections.shuffle(spawns);
-            Iterator<Vec3i> iter = spawns.iterator();
-            for (Player player : players) {
-                if (getTeam(player) != team) continue;
-                Location location = iter.next().toLocation(getWorld());
-                Vector lookAt = spawn.toVector().subtract(location.toVector()).normalize();
-                location.setDirection(lookAt);
-                player.teleport(location, TeleportCause.PLUGIN);
-                player.setGameMode(GameMode.SURVIVAL);
-                player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
-                player.setFoodLevel(20);
-                player.setSaturation(20.0f);
-            }
-        }
+        teleportPlayersStartLocations(players);
     }
 
     public void newPhase(GamePhase phase) {
@@ -848,6 +853,7 @@ public final class Game {
             long timeLeft = timeLeft(state.getGoalStarted(), total);
             if (timeLeft <= 0) {
                 newPhase(GamePhase.KICKOFF);
+                teleportPlayersStartLocations(getEligiblePlayers());
             } else {
                 bossBar.progress(clamp1((float) timeLeft / (float) total));
                 if ((fireworkTicks++ % 10) == 0) {

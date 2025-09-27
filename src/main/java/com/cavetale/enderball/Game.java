@@ -210,7 +210,11 @@ public final class Game {
         }
         if (state.getPhase() == GamePhase.KICKOFF && state.getKickoffTeam() != team) return;
         GameBall ball = getOrCreateBall(block);
-        Kick.Strength strength = player.isSprinting() ? Kick.Strength.LONG : Kick.Strength.SHORT;
+        Kick.Strength strength = player.isSneaking()
+            ? Kick.Strength.SNEAK
+            : player.isSprinting()
+            ? Kick.Strength.LONG
+            : Kick.Strength.SHORT;
         Kick.Height height = Kick.Height.of(event.getAction());
         Vector vector = player.getLocation().getDirection();
         double rnd = (0.25 * (random.nextDouble() - random.nextDouble())) + 1.0;
@@ -245,6 +249,9 @@ public final class Game {
             }
         }
         switch (kick.strength) {
+        case SNEAK:
+            world.playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 0.5f, 2.0f);
+            break;
         case SHORT: {
             world.playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 2.0f);
             final int food = Math.max(0, player.getFoodLevel() - 2);

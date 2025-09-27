@@ -14,6 +14,7 @@ public class Kick {
     protected final Vector vector;
 
     public enum Strength {
+        SNEAK(0.3),
         SHORT(0.5),
         LONG(0.9);
 

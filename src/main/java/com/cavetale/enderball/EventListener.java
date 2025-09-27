@@ -22,11 +22,11 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDropItemEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -93,20 +93,6 @@ public final class EventListener implements Listener {
         if (block.getType() != Material.DRAGON_EGG) return;
         if (game == null) return;
         game.onKickBall(player, block, event);
-    }
-
-    @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
-    private void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
-        // EntityDamageByEntityEvent is not fired when left clicking
-        // falling blocks!
-        if (!(event.getRightClicked() instanceof FallingBlock)) return;
-        FallingBlock fallingBlock = (FallingBlock) event.getRightClicked();
-        if (fallingBlock.getBlockData().getMaterial() != Material.DRAGON_EGG) return;
-        final Game game = Game.in(fallingBlock.getWorld());
-        if (game == null) return;
-        event.setCancelled(true);
-        final Player player = event.getPlayer();
-        game.onHeaderBall(player, fallingBlock);
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
@@ -202,5 +188,10 @@ public final class EventListener implements Listener {
             // PlayerSpawnLocationEvent#setSpawnLocation does not retain pitch and yaw.
             Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().teleport(spawnLocation));
         }
+    }
+
+    @EventHandler
+    private void onEntityDamage(EntityDamageEvent event) {
+        Game.ifIn(event.getEntity().getWorld(), game -> event.setCancelled(true));
     }
 }

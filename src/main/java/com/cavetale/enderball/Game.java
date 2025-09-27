@@ -234,23 +234,28 @@ public final class Game {
         Block block = kick.ball.getBlock(world);
         block.setType(Material.AIR, false);
         Location ballLocation = block.getLocation().add(0.5, 0.0, 0.5);
-        FallingBlock fallingBlock = ballLocation.getWorld().spawn(ballLocation, FallingBlock.class, e -> e.setBlockData(Material.DRAGON_EGG.createBlockData()));
+        FallingBlock fallingBlock = world.spawn(ballLocation, FallingBlock.class, e -> e.setBlockData(Material.DRAGON_EGG.createBlockData()));
         fallingBlock.setDropItem(true);
         fallingBlock.setVelocity(kick.vector);
         fallingBlock.setGlowing(true);
         kick.ball.setEntityUuid(fallingBlock.getUniqueId());
         kick.ball.setLastKicker(player.getUniqueId());
+        for (Entity entity : world.getNearbyEntities(fallingBlock.getBoundingBox().expand(0.25))) {
+            if (entity instanceof Player collider) {
+                kick.ball.getColliders().add(collider.getUniqueId());
+            }
+        }
         switch (kick.strength) {
         case SHORT: {
-            ballLocation.getWorld().playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 2.0f);
-            final int food = Math.max(0, player.getFoodLevel() - 5);
+            world.playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 2.0f);
+            final int food = Math.max(0, player.getFoodLevel() - 2);
             player.setFoodLevel(food);
             player.setSaturation((float) food);
             break;
         }
         case LONG: {
-            ballLocation.getWorld().playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.66f);
-            final int food = Math.max(0, player.getFoodLevel() - 10);
+            world.playSound(ballLocation, Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.66f);
+            final int food = Math.max(0, player.getFoodLevel() - 4);
             player.setFoodLevel(food);
             player.setSaturation((float) food);
             break;
@@ -313,6 +318,7 @@ public final class Game {
         gameBall.setEntityUuid(null);
         gameBall.setLastKicker(null);
         gameBall.getKicks().clear();
+        gameBall.getColliders().clear();
         gameBall.setKickCooldown(System.currentTimeMillis() + 500L);
     }
 
@@ -768,16 +774,21 @@ public final class Game {
 
     public void tick() {
         if (state.getPhase().isPlaying()) {
-            if (hungerTicks++ % 20 == 0) {
+            if (hungerTicks % 10 == 0) {
                 for (Player player : getPresentPlayers()) {
                     if (getTeam(player) == null) continue;
-                    final int food = player.isSprinting()
-                        ? Math.max(0, player.getFoodLevel() - 1)
-                        : Math.min(20, player.getFoodLevel() + 2);
-                    player.setFoodLevel(food);
-                    player.setSaturation((float) food);
+                    final int food = player.getFoodLevel();
+                    if (player.isSprinting() && hungerTicks % 20 == 0) {
+                        player.setFoodLevel(Math.max(0, player.getFoodLevel() - 1));
+                    }
+                    if (!player.isSprinting()) {
+                        player.setFoodLevel(Math.min(20, player.getFoodLevel() + 1));
+                    }
+                    player.setSaturation((float) player.getFoodLevel());
+                    player.setExhaustion(0f);
                 }
             }
+            hungerTicks += 1;
         }
         switch (state.getPhase()) {
         case IDLE: return;
@@ -841,22 +852,33 @@ public final class Game {
             break;
         }
         case PLAY: {
-            for (GameBall gameBall : new ArrayList<>(state.getBalls())) {
-                if (!gameBall.getKicks().isEmpty() && gameBall.getKickCooldown() <= System.currentTimeMillis()) {
-                    List<UUID> uuids = new ArrayList<>(gameBall.getKicks().keySet());
+            for (GameBall gameBall : List.copyOf(state.getBalls())) {
+                if (gameBall.isBlock() && !gameBall.getKicks().isEmpty() && gameBall.getKickCooldown() <= System.currentTimeMillis()) {
+                    final List<UUID> uuids = new ArrayList<>(gameBall.getKicks().keySet());
                     uuids.removeIf(u -> Bukkit.getPlayer(u) == null || getTeam(u) == null);
                     if (!uuids.isEmpty()) {
-                        UUID uuid = uuids.get(random.nextInt(uuids.size()));
-                        Kick kick = gameBall.getKicks().get(uuid);
+                        final UUID uuid = uuids.get(random.nextInt(uuids.size()));
+                        final Kick kick = gameBall.getKicks().get(uuid);
                         kick(kick);
                     }
                     gameBall.getKicks().clear();
                     gameBall.setKickCooldown(0L);
                     continue;
                 }
-                FallingBlock fallingBlock = gameBall.getEntity();
+                final FallingBlock fallingBlock = gameBall.getEntity();
                 if (fallingBlock != null) {
                     gameBall.setBlockVector(Vec3i.of(fallingBlock.getLocation()));
+                    // Body Blocking
+                    for (Entity entity : world.getNearbyEntities(fallingBlock.getBoundingBox())) {
+                        if (entity instanceof Player blocker && !blocker.getUniqueId().equals(gameBall.getLastKicker()) && !gameBall.getColliders().contains(blocker.getUniqueId())) {
+                            final Vector velo = fallingBlock.getVelocity();
+                            if (velo.getX() != 0.0 && velo.getZ() != 0.0) {
+                                fallingBlock.setVelocity(velo.setX(0).setZ(0));
+                                world.playSound(fallingBlock.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.5f);
+                            }
+                            break;
+                        }
+                    }
                 }
                 if (ballZoneAction(gameBall)) return;
             }
@@ -871,7 +893,7 @@ public final class Game {
                 if (ball.isEntity()) {
                     FallingBlock entity = ball.getEntity();
                     if (entity == null) continue;
-                    entity.getWorld().spawnParticle(Particle.FIREWORK, entity.getLocation(), 1, 0, 0, 0, 0);
+                    world.spawnParticle(Particle.FIREWORK, entity.getLocation().add(0, 0.5 * entity.getHeight(), 0), 1, 0, 0, 0, 0);
                 }
             }
             for (UUID uuid : List.copyOf(state.getTeams().keySet())) {
@@ -1059,18 +1081,6 @@ public final class Game {
     public String getTeamName(GameTeam team) {
         if (state.getNations().size() != 2) return team.humanName;
         return state.getNations().get(team.ordinal()).name;
-    }
-
-    public void onHeaderBall(Player player, FallingBlock fallingBlock) {
-        Vector velocity = fallingBlock.getVelocity();
-        if (velocity.getY() >= 0) return; // Rising ball cannot be blocked!
-        if (Math.abs(velocity.getX()) < 0.01 && Math.abs(velocity.getZ()) < 0.01) return; // Already blocked!
-        GameTeam team = getTeam(player);
-        if (team == null) return;
-        GameBall gameBall = getOrCreateBall(fallingBlock);
-        gameBall.setLastKicker(player.getUniqueId());
-        fallingBlock.setVelocity(velocity.setX(0).setZ(0));
-        fallingBlock.getWorld().playSound(fallingBlock.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.MASTER, 1.0f, 1.5f);
     }
 
     public static Component formatTime(long millis) {

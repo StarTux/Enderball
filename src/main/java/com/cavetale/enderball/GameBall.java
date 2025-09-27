@@ -3,7 +3,9 @@ package com.cavetale.enderball;
 import com.cavetale.core.struct.Vec3i;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.Data;
 import org.bukkit.Bukkit;
@@ -23,6 +25,10 @@ public final class GameBall implements Serializable {
     private UUID assistance = null;
     private long kickCooldown;
     private final Map<UUID, Kick> kicks = new HashMap<>();
+    // When the ball is spawned, we remember who is currently
+    // colliding so the ball goes through them and cannot be perma
+    // blocked.
+    private final Set<UUID> colliders = new HashSet<>();
 
     public boolean isEntity() {
         return entityUuid != null;

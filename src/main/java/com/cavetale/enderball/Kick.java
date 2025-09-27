@@ -14,8 +14,8 @@ public class Kick {
     protected final Vector vector;
 
     public enum Strength {
-        SHORT(0.7),
-        LONG(1.0);
+        SHORT(0.5),
+        LONG(0.9);
 
         public final double strength;
 

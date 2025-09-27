@@ -10,6 +10,7 @@ public final class Save {
     protected Map<UUID, Integer> score = new HashMap<>();
     protected Map<UUID, Integer> goals = new HashMap<>();
     protected Map<UUID, Integer> assists = new HashMap<>();
+    protected boolean pause = false;
     protected boolean event = false;
     protected boolean testing = false;
 

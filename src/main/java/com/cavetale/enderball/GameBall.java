@@ -1,6 +1,6 @@
 package com.cavetale.enderball;
 
-import com.cavetale.enderball.struct.Vec3i;
+import com.cavetale.core.struct.Vec3i;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;

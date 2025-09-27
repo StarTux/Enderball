@@ -38,21 +38,21 @@ public final class EventListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
-    void onPlayerJoin(PlayerJoinEvent event) {
-        plugin.getGame().onJoin(event.getPlayer());
+    private void onPlayerJoin(PlayerJoinEvent event) {
+        Game.ifIn(event.getPlayer().getWorld(), game -> game.onJoin(event.getPlayer()));
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
-    void onPlayerQuit(PlayerQuitEvent event) {
-        event.getPlayer().getInventory().clear();
+    private void onPlayerQuit(PlayerQuitEvent event) {
+        Game.ifIn(event.getPlayer().getWorld(), game -> event.getPlayer().getInventory().clear());
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
-    void onEntityChangeBlock(EntityChangeBlockEvent event) {
+    private void onEntityChangeBlock(EntityChangeBlockEvent event) {
         if (!(event.getEntity() instanceof FallingBlock)) return;
         FallingBlock fallingBlock = (FallingBlock) event.getEntity();
         if (fallingBlock.getBlockData().getMaterial() != Material.DRAGON_EGG) return;
-        Game game = plugin.getGameAt(fallingBlock.getLocation());
+        final Game game = Game.in(fallingBlock.getWorld());
         if (game == null) return;
         if (event.getBlock().isEmpty()) {
             game.onBallLand(fallingBlock, event.getBlock(), event);
@@ -62,19 +62,21 @@ public final class EventListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
-    void onEntityDropItem(EntityDropItemEvent event) {
+    private void onEntityDropItem(EntityDropItemEvent event) {
         if (!(event.getEntity() instanceof FallingBlock)) return;
-        FallingBlock fallingBlock = (FallingBlock) event.getEntity();
+        final FallingBlock fallingBlock = (FallingBlock) event.getEntity();
         if (fallingBlock.getBlockData().getMaterial() != Material.DRAGON_EGG) return;
-        Game game = plugin.getGameAt(fallingBlock.getLocation());
+        final Game game = Game.in(fallingBlock.getWorld());
         if (game == null) return;
         game.onBallBreak(fallingBlock, event);
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
-    void onPlayerInteract(PlayerInteractEvent event) {
+    private void onPlayerInteract(PlayerInteractEvent event) {
         final Player player = event.getPlayer();
         if (player.getGameMode() == GameMode.CREATIVE) return;
+        final Game game = Game.in(player.getWorld());
+        if (game == null) return;
         switch (event.getAction()) {
         case LEFT_CLICK_BLOCK:
             event.setCancelled(true);
@@ -83,44 +85,47 @@ public final class EventListener implements Listener {
         default:
             return;
         }
-        Block block = event.getClickedBlock();
+        final Block block = event.getClickedBlock();
         if (block == null) return;
         if (block.getType() != Material.DRAGON_EGG) return;
-        Game game = plugin.getGameAt(block);
         if (game == null) return;
         game.onKickBall(player, block, event);
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
-    void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+    private void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
         // EntityDamageByEntityEvent is not fired when left clicking
         // falling blocks!
         if (!(event.getRightClicked() instanceof FallingBlock)) return;
         FallingBlock fallingBlock = (FallingBlock) event.getRightClicked();
         if (fallingBlock.getBlockData().getMaterial() != Material.DRAGON_EGG) return;
-        Game game = plugin.getGameAt(fallingBlock.getLocation());
+        final Game game = Game.in(fallingBlock.getWorld());
         if (game == null) return;
         event.setCancelled(true);
-        Player player = event.getPlayer();
+        final Player player = event.getPlayer();
         game.onHeaderBall(player, fallingBlock);
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
-    void onBlockPlace(BlockPlaceEvent event) {
-        Block block = event.getBlock();
+    private void onBlockPlace(BlockPlaceEvent event) {
+        final Block block = event.getBlock();
+        final Game game = Game.in(block.getWorld());
+        if (game == null) return;
         if (block.getType() != Material.DRAGON_EGG) {
             if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
                 event.setCancelled(true);
             }
             return;
         }
-        Game game = plugin.getGameAt(block);
         game.onPlaceBall(event.getPlayer(), block);
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
-    void onInventoryClick(InventoryClickEvent event) {
-        if (event.getWhoClicked().isOp()) return;
+    private void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (player.isOp()) return;
+        final Game game = Game.in(player.getWorld());
+        if (game == null) return;
         switch (event.getSlotType()) {
         case ARMOR:
             event.setCancelled(true);
@@ -130,20 +135,23 @@ public final class EventListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
-    void onInventoryDrag(InventoryDragEvent event) {
-        if (event.getWhoClicked().isOp()) return;
+    private void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (player.isOp()) return;
+        final Game game = Game.in(player.getWorld());
+        if (game == null) return;
         event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.NORMAL)
     private void onPlayerHud(PlayerHudEvent event) {
-        Player player = event.getPlayer();
-        Game game = plugin.getGameAt(player.getLocation());
-        List<Component> lines = new ArrayList<>();
+        final Player player = event.getPlayer();
+        final Game game = Game.in(player.getWorld());
+        final List<Component> lines = new ArrayList<>();
         if (game != null) {
             game.onSidebar(player, lines);
         }
-        if (plugin.getSave().isEvent() && !plugin.getGame().getState().getPhase().isPlaying()) {
+        if (game == null && plugin.getSave().isEvent()) {
             lines.addAll(Highscore.sidebar(plugin.getHighscore()));
         }
         if (lines.isEmpty()) return;
@@ -154,7 +162,7 @@ public final class EventListener implements Listener {
     @EventHandler(ignoreCancelled = true, priority = EventPriority.NORMAL)
     void onFoodLevelChange(FoodLevelChangeEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
-        Game game = plugin.getGameAt(player.getLocation());
+        Game game = Game.in(player.getWorld());
         if (game != null) game.onFoodLevelChange(event, player);
     }
 

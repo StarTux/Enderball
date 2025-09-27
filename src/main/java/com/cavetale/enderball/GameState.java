@@ -2,8 +2,6 @@ package com.cavetale.enderball;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,9 +11,9 @@ import lombok.Data;
 @Data
 public final class GameState implements Serializable {
     private GamePhase phase = GamePhase.IDLE;
-    private List<GameBall> balls = Collections.emptyList();
+    private List<GameBall> balls = new ArrayList<>();
     private int kickoffTeam;
-    private List<Integer> scores = Arrays.asList(0, 0);
+    private List<Integer> scores = new ArrayList<>(List.of(0, 0));
     private Map<UUID, GameTeam> teams = new HashMap<>();
     private List<Nation> nations = new ArrayList<>();
     private long waitForPlayersStarted;
@@ -25,16 +23,9 @@ public final class GameState implements Serializable {
     private long goalStarted;
     private long endStarted;
     private boolean manual;
+    private Map<UUID, Integer> ballContacts = new HashMap<>();
 
-    public void prep() {
-        if (!(balls instanceof ArrayList)) {
-            balls = new ArrayList<>(balls);
-        }
-        if (!(scores instanceof ArrayList)) {
-            scores = new ArrayList<>(scores);
-        }
-        if (!(teams instanceof HashMap)) {
-            teams = new HashMap<>(teams);
-        }
+    public void addBallContact(UUID uuid) {
+        ballContacts.put(uuid, ballContacts.getOrDefault(uuid, 0) + 1);
     }
 }

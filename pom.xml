@@ -98,5 +98,29 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- Creative -->
+    <dependency>
+      <groupId>com.winthier.creative</groupId>
+      <artifactId>creative</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Area -->
+    <dependency>
+      <groupId>com.cavetale.area</groupId>
+      <artifactId>area</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Afk -->
+    <dependency>
+      <groupId>com.cavetale.afk</groupId>
+      <artifactId>afk</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
   </dependencies>
 </project>

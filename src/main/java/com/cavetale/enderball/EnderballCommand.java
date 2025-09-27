@@ -4,15 +4,15 @@ import com.cavetale.core.command.AbstractCommand;
 import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
+import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.playercache.PlayerCache;
-import com.cavetale.enderball.struct.Cuboid;
-import com.cavetale.enderball.util.WorldEdit;
+import com.winthier.creative.BuildWorld;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -26,19 +26,21 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
 
     @Override
     protected void onEnable() {
-        rootNode.addChild("select")
-            .completableList(Arrays.asList("area", "field", "kickoff", "goal0", "goal1", "spawn0", "spawn1", "outside"))
-            .playerCaller(this::select);
-        rootNode.addChild("save").denyTabCompletion()
-            .senderCaller(this::save);
-        rootNode.addChild("reset").denyTabCompletion()
-            .senderCaller(this::reset);
-        rootNode.addChild("start").denyTabCompletion()
+        rootNode.addChild("start").arguments("<map>")
+            .description("Start a game")
+            .completers(CommandArgCompleter.supplyList(this::getMapPaths))
             .senderCaller(this::start);
+        rootNode.addChild("stop").denyTabCompletion()
+            .description("Stop a game")
+            .playerCaller(this::stop);
         rootNode.addChild("event").arguments("true|false")
             .description("Set event state")
-            .completers(CommandArgCompleter.list("true", "false"))
+            .completers(CommandArgCompleter.BOOLEAN)
             .senderCaller(this::event);
+        rootNode.addChild("pause").arguments("true|false")
+            .description("Set pause state")
+            .completers(CommandArgCompleter.BOOLEAN)
+            .senderCaller(this::pause);
         rootNode.addChild("testing").arguments("true|false")
             .description("Set testing state")
             .completers(CommandArgCompleter.list("true", "false"))
@@ -46,13 +48,10 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         rootNode.addChild("manual").arguments("true|false")
             .description("Set manual mode")
             .completers(CommandArgCompleter.list("true", "false"))
-            .senderCaller(this::manual);
+            .playerCaller(this::manual);
         rootNode.addChild("tojava").denyTabCompletion()
             .description("Serialize all nation flags to Java")
             .senderCaller(this::toJava);
-        rootNode.addChild("highlight").denyTabCompletion()
-            .description("Highlight the field")
-            .playerCaller(this::highlight);
         rootNode.addChild("kick").arguments("<player>")
             .description("Kick a player from the game")
             .completers(CommandArgCompleter.NULL)
@@ -64,16 +63,16 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
             .description("Team commands");
         teamNode.addChild("reset").denyTabCompletion()
             .description("Reset teams")
-            .senderCaller(this::teamClear);
+            .playerCaller(this::teamClear);
         teamNode.addChild("red").arguments("<players>")
             .description("Add players to red team")
             .completers(CommandArgCompleter.NULL, CommandArgCompleter.REPEAT)
-            .senderCaller(this::teamRed);
+            .playerCaller(this::teamRed);
         teamNode.addChild("blue").arguments("<players>")
             .description("Add players to blue team")
             .completers(CommandArgCompleter.NULL, CommandArgCompleter.REPEAT)
-            .senderCaller(this::teamBlue);
-        CommandNode scoreNode = rootNode.addChild("score").description("Score subcommands");
+            .playerCaller(this::teamBlue);
+        final CommandNode scoreNode = rootNode.addChild("score").description("Score subcommands");
         scoreNode.addChild("reset").denyTabCompletion()
             .description("Reset scores")
             .senderCaller(this::scoreReset);
@@ -87,94 +86,59 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
             .senderCaller(this::scoreReward);
     }
 
-    protected Cuboid requireWorldEditSelection(Player player) throws CommandWarn {
-        Cuboid cuboid = WorldEdit.getSelection(player);
-        if (cuboid == null) throw new CommandWarn("Make a selection first!");
-        return cuboid;
+    private List<String> getMapPaths() {
+        final List<String> result = new ArrayList<>();
+        for (BuildWorld buildWorld : BuildWorld.findMinigameWorlds(MinigameMatchType.ENDERBALL, false)) {
+            result.add(buildWorld.getPath());
+        }
+        return result;
     }
 
-    protected boolean select(Player player, String[] args) {
+    private boolean start(CommandSender sender, String[] args) {
         if (args.length != 1) return false;
-        switch (args[0]) {
-        case "world":
-            plugin.getGame().getBoard().setWorld(player.getWorld().getName());
-            player.sendMessage("World = " + plugin.getGame().getBoard().getWorld());
-            break;
-        case "area":
-            plugin.getGame().getBoard().setArea(requireWorldEditSelection(player));
-            player.sendMessage("Area = " + plugin.getGame().getBoard().getArea());
-            break;
-        case "field":
-            plugin.getGame().getBoard().setField(requireWorldEditSelection(player));
-            player.sendMessage("Field = " + plugin.getGame().getBoard().getField());
-            break;
-        case "kickoff":
-            plugin.getGame().getBoard().setKickoff(requireWorldEditSelection(player).getMin());
-            player.sendMessage("Kickoff = " + plugin.getGame().getBoard().getKickoff());
-            break;
-        case "goal0":
-            plugin.getGame().getBoard().getGoals().set(0, requireWorldEditSelection(player));
-            player.sendMessage("Goal[0] = " + plugin.getGame().getBoard().getGoals().get(0));
-            break;
-        case "goal1":
-            plugin.getGame().getBoard().getGoals().set(1, requireWorldEditSelection(player));
-            player.sendMessage("Goal[1] = " + plugin.getGame().getBoard().getGoals().get(1));
-            break;
-        case "spawn0":
-            plugin.getGame().getBoard().getSpawns().set(0, requireWorldEditSelection(player));
-            player.sendMessage("Spawn[0] = " + plugin.getGame().getBoard().getSpawns().get(0));
-            break;
-        case "spawn1":
-            plugin.getGame().getBoard().getSpawns().set(1, requireWorldEditSelection(player));
-            player.sendMessage("Spawn[1] = " + plugin.getGame().getBoard().getSpawns().get(1));
-            break;
-        case "outside":
-            plugin.getGame().getBoard().setOutside(requireWorldEditSelection(player).getMin());
-            player.sendMessage("Outside = " + plugin.getGame().getBoard().getOutside());
-            break;
-        default:
-            throw new CommandWarn("Unknown: " + args[0]);
+        final BuildWorld buildWorld = BuildWorld.findWithPath(args[0]);
+        if (buildWorld == null) {
+            throw new CommandWarn("Build world not found: " + args[0]);
         }
-        plugin.getGame().saveBoard();
+        if (buildWorld.getRow().parseMinigame() != MinigameMatchType.ENDERBALL) {
+            throw new CommandWarn("Not an Enderball map: " + buildWorld.getName());
+        }
+        buildWorld.makeLocalCopyAsync(world -> {
+                final Game game = new Game(plugin, buildWorld, world);
+                try {
+                    game.enable();
+                } catch (IllegalStateException iae) {
+                    plugin.getLogger().log(Level.SEVERE, "Enabling game: " + buildWorld.getPath(), iae);
+                    game.disable();
+                    sender.sendMessage(text("...Error: " + iae.getMessage(), RED));
+                }
+                plugin.getGames().add(game);
+                game.bringPlayersFromLobby();
+            });
+        sender.sendMessage(text("Starting game...", YELLOW));
         return true;
     }
 
-    protected boolean save(CommandSender sender, String[] args) {
-        plugin.getGame().saveState();
-        sender.sendMessage("State saved!");
-        return true;
+    private void stop(Player player) {
+        final Game game = Game.in(player.getWorld());
+        if (game == null) throw new CommandWarn("No game here");
+        game.disable();
+        plugin.getGames().remove(game);
+        player.sendMessage(text("Game stopped", YELLOW));
     }
 
-    protected boolean reset(CommandSender sender, String[] args) {
-        plugin.getGame().newPhase(GamePhase.IDLE);
-        plugin.getGame().saveState();
-        sender.sendMessage("Game reset");
-        return true;
-    }
-
-    protected boolean start(CommandSender sender, String[] args) {
-        plugin.getGame().resetGame();
-        plugin.getGame().newPhase(GamePhase.WAIT_FOR_PLAYERS);
-        sender.sendMessage("Game started");
-        return true;
-    }
-
-    protected boolean manual(CommandSender sender, String[] args) {
+    private boolean manual(Player player, String[] args) {
         if (args.length > 1) return false;
+        final Game game = Game.in(player.getWorld());
+        if (game == null) throw new CommandWarn("No game here");
         if (args.length >= 1) {
-            try {
-                plugin.getGame().getState().setManual(Boolean.parseBoolean(args[0]));
-            } catch (IllegalArgumentException iae) {
-                throw new CommandWarn("Boolean expected: " + args[0]);
-            }
-            plugin.getGame().saveState();
+            game.getState().setManual(CommandArgCompleter.requireBoolean(args[0]));
         }
-        sender.sendMessage(text("Manual Mode: " + plugin.getGame().getState().isManual(),
-                                YELLOW));
+        player.sendMessage(text("Manual Mode: " + game.getState().isManual(), YELLOW));
         return true;
     }
 
-    protected boolean toJava(CommandSender sender, String[] args) {
+    private boolean toJava(CommandSender sender, String[] args) {
         if (args.length != 0) return false;
         List<String> lines = new ArrayList<>();
         for (Nation nation : Nation.values()) {
@@ -185,19 +149,9 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         return true;
     }
 
-    private void highlight(Player player) {
-        for (Game game : plugin.getGames()) {
-            if (!player.getWorld().equals(game.getWorld())) continue;
-            for (Cuboid cuboid : game.getBoard().getAllAreas()) {
-                cuboid.highlight(player);
-            }
-        }
-        player.sendMessage(text("All areas highlighted", AQUA));
-    }
-
     private boolean kick(Player player, String[] args) {
         if (args.length != 1) return false;
-        Game game = plugin.getGameAt(player.getLocation());
+        final Game game = Game.in(player.getWorld());
         if (game == null) throw new CommandWarn("No game here");
         PlayerCache playerCache = PlayerCache.require(args[0]);
         GameTeam team = game.getState().getTeams().remove(playerCache.uuid);
@@ -213,7 +167,7 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
     }
 
     private void skip(Player player) {
-        Game game = plugin.getGameAt(player.getLocation());
+        final Game game = Game.in(player.getWorld());
         if (game == null) throw new CommandWarn("No game here");
         game.setSkip(true);
         player.sendMessage(text("Skipping...", YELLOW));
@@ -222,17 +176,26 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
     private boolean event(CommandSender sender, String[] args) {
         if (args.length > 1) return false;
         if (args.length == 1) {
-            try {
-                Boolean value = Boolean.parseBoolean(args[0]);
-                plugin.getSave().setEvent(value);
-                plugin.save();
-            } catch (IllegalArgumentException iae) {
-                throw new CommandWarn("Not a boolean: " + args[0]);
-            }
+            final boolean value = CommandArgCompleter.requireBoolean(args[0]);
+            plugin.getSave().setEvent(value);
+            plugin.save();
         }
         sender.sendMessage(plugin.getSave().isEvent()
                            ? text("Event mode enabled", GREEN)
                            : text("Event mode disabled", RED));
+        return true;
+    }
+
+    private boolean pause(CommandSender sender, String[] args) {
+        if (args.length > 1) return false;
+        if (args.length == 1) {
+            final boolean value = CommandArgCompleter.requireBoolean(args[0]);
+            plugin.getSave().setPause(value);
+            plugin.save();
+        }
+        sender.sendMessage(plugin.getSave().isPause()
+                           ? text("Pause mode enabled", GREEN)
+                           : text("Pause mode disabled", RED));
         return true;
     }
 
@@ -253,27 +216,26 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         return true;
     }
 
-    protected boolean teamClear(CommandSender sender, String[] args) {
+    private boolean teamClear(Player player, String[] args) {
         if (args.length == 0) return false;
-        Game game = plugin.getGame();
+        final Game game = Game.in(player.getWorld());
         game.getState().setTeams(new HashMap<>());
-        game.saveState();
-        sender.sendMessage(text("Teams were reset", YELLOW));
+        player.sendMessage(text("Teams were reset", YELLOW));
         return true;
     }
 
-    protected boolean teamRed(CommandSender sender, String[] args) {
-        return teamMembers(GameTeam.RED, sender, args);
+    private boolean teamRed(Player player, String[] args) {
+        return teamMembers(GameTeam.RED, player, args);
     }
 
-    protected boolean teamBlue(CommandSender sender, String[] args) {
-        return teamMembers(GameTeam.BLUE, sender, args);
+    private boolean teamBlue(Player player, String[] args) {
+        return teamMembers(GameTeam.BLUE, player, args);
     }
 
-    protected boolean teamMembers(GameTeam team, CommandSender sender, String[] args) {
+    private boolean teamMembers(GameTeam team, Player player, String[] args) {
         if (args.length == 0) return false;
-        Game game = plugin.getGame();
-        Map<UUID, GameTeam> addMap = new HashMap<>();
+        final Game game = Game.in(player.getWorld());
+        final Map<UUID, GameTeam> addMap = new HashMap<>();
         for (String arg : args) {
             Player target = Bukkit.getPlayerExact(arg);
             if (target == null) {
@@ -292,7 +254,7 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
                 game.dress(target, entry.getValue());
             }
         }
-        sender.sendMessage(text("Added to team " + team.humanName
+        player.sendMessage(text("Added to team " + team.humanName
                                 + ": " + String.join(" ", args),
                                 YELLOW));
         return true;

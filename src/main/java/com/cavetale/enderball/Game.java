@@ -1,15 +1,21 @@
 package com.cavetale.enderball;
 
+import com.cavetale.afk.AFKPlugin;
+import com.cavetale.core.event.minigame.MinigameFlag;
+import com.cavetale.core.event.minigame.MinigameMatchCompleteEvent;
+import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.font.GuiOverlay;
 import com.cavetale.core.font.VanillaEffects;
 import com.cavetale.core.money.Money;
-import com.cavetale.core.util.Json;
-import com.cavetale.enderball.struct.Cuboid;
-import com.cavetale.enderball.struct.Vec3i;
+import com.cavetale.core.struct.Cuboid;
+import com.cavetale.core.struct.Vec3i;
 import com.cavetale.enderball.util.Fireworks;
-import com.cavetale.enderball.util.Gui;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.WardrobeItem;
+import com.cavetale.mytems.util.Gui;
+import com.winthier.creative.BuildWorld;
+import com.winthier.creative.file.Files;
+import com.winthier.creative.review.MapReview;
 import com.winthier.title.TitlePlugin;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -22,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -57,7 +64,6 @@ import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import static com.cavetale.core.font.Unicode.tiny;
@@ -78,44 +84,64 @@ import static net.kyori.adventure.title.Title.Times.times;
 public final class Game {
     public static final long GAME_TIME = 60L * 15L * 1000L;
     private final EnderballPlugin plugin;
-    private final GameBoard board;
-    private final GameState state;
-    private BukkitTask task;
+    private final BuildWorld buildWorld;
+    private final World world;
+    private GameBoard board = new GameBoard();
+    private GameState state = new GameState();
     private Random random = new Random();
     private BossBar bossBar;
     private int hungerTicks = 0;
     private int fireworkTicks = 0;
     private final Map<UUID, Nation> nationVotes = new HashMap<>();
+    private boolean obsolete;
     @Setter private boolean skip;
     public static final List<String> TITLES = List.of("Fußball", "Striker", "Goal", "Soccer", "EnderballChampion");
 
+    public static Game in(World world) {
+        for (Game game : EnderballPlugin.getInstance().getGames()) {
+            if (world.equals(game.getWorld())) return game;
+        }
+        return null;
+    }
+
+    public static void ifIn(World world, Consumer<Game> callback) {
+        final Game game = in(world);
+        if (game != null) callback.accept(game);
+    }
+
     public void enable() {
-        board.prep();
-        state.prep();
-        task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
+        board.load(world);
         bossBar = BossBar.bossBar(text("Enderball"), 1.0f,
                                   BossBar.Color.GREEN, BossBar.Overlay.PROGRESS);
+        setupPhase(GamePhase.WAIT_FOR_PLAYERS);
+    }
+
+    public void bringPlayersFromLobby() {
+        for (Player player : plugin.getLobby().getPlayers()) {
+            player.eject();
+            player.leaveVehicle();
+            if (AFKPlugin.isAfk(player)) {
+                player.teleport(getViewerLocation());
+            } else {
+                player.teleport(world.getSpawnLocation());
+            }
+            player.setGameMode(GameMode.ADVENTURE);
+            player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
+            player.setFoodLevel(20);
+            player.setSaturation(20.0f);
+            player.setExhaustion(0f);
+        }
     }
 
     public void disable() {
-        saveState();
-        task.cancel();
-    }
-
-    public void saveBoard() {
-        Json.save(plugin.getBoardFile(), board, true);
-    }
-
-    public void saveState() {
-        Json.save(plugin.getStateFile(), state, true);
-    }
-
-    public World getWorld() {
-        return Bukkit.getWorld(board.getWorld());
+        for (Player player : world.getPlayers()) {
+            plugin.getLobby().warp(player);
+        }
+        Files.deleteWorld(world);
     }
 
     public String getName() {
-        return board.getWorld();
+        return buildWorld.getPath();
     }
 
     public void resetGame() {
@@ -130,14 +156,14 @@ public final class Game {
         }
     }
 
-    protected GameBall getBall(Block block) {
+    private GameBall getBall(Block block) {
         for (GameBall ball : state.getBalls()) {
             if (ball.isBlock() && ball.getBlockVector().isSimilar(block)) return ball;
         }
         return null;
     }
 
-    protected GameBall getBall(Entity entity) {
+    private GameBall getBall(Entity entity) {
         UUID uuid = entity.getUniqueId();
         for (GameBall ball : state.getBalls()) {
             if (uuid.equals(ball.getEntityUuid())) return ball;
@@ -145,7 +171,7 @@ public final class Game {
         return null;
     }
 
-    protected GameBall getOrCreateBall(Block block) {
+    private GameBall getOrCreateBall(Block block) {
         GameBall gameBall = getBall(block);
         if (gameBall == null) {
             gameBall = new GameBall();
@@ -155,7 +181,7 @@ public final class Game {
         return gameBall;
     }
 
-    protected GameBall getOrCreateBall(Entity entity) {
+    private GameBall getOrCreateBall(Entity entity) {
         GameBall gameBall = getBall(entity);
         if (gameBall == null) {
             gameBall = new GameBall();
@@ -165,11 +191,11 @@ public final class Game {
         return gameBall;
     }
 
-    protected GameTeam getTeam(Player player) {
+    private GameTeam getTeam(Player player) {
         return state.getTeams().get(player.getUniqueId());
     }
 
-    protected GameTeam getTeam(UUID uuid) {
+    private GameTeam getTeam(UUID uuid) {
         return state.getTeams().get(uuid);
     }
 
@@ -203,7 +229,7 @@ public final class Game {
     private void kick(Kick kick) {
         if (!kick.ball.isBlock()) return;
         Player player = kick.player;
-        Block block = kick.ball.getBlock(getWorld());
+        Block block = kick.ball.getBlock(world);
         block.setType(Material.AIR, false);
         Location ballLocation = block.getLocation().add(0.5, 0.0, 0.5);
         FallingBlock fallingBlock = ballLocation.getWorld().spawn(ballLocation, FallingBlock.class, e -> e.setBlockData(Material.DRAGON_EGG.createBlockData()));
@@ -230,6 +256,7 @@ public final class Game {
         default: break;
         }
         if (state.getPhase() == GamePhase.KICKOFF) newPhase(GamePhase.PLAY);
+        state.addBallContact(player.getUniqueId());
         if (plugin.getSave().isEvent()) {
             plugin.getSave().addScore(player.getUniqueId(), 1);
             plugin.computeHighscore();
@@ -242,7 +269,7 @@ public final class Game {
         state.getBalls().add(gameBall);
     }
 
-    protected GameTeam getGoal(Vec3i vec) {
+    private GameTeam getGoal(Vec3i vec) {
         for (int i = 0; i < 2; i += 1) {
             Cuboid cuboid = board.getGoals().get(i);
             if (cuboid.contains(vec)) return GameTeam.of(i);
@@ -250,7 +277,7 @@ public final class Game {
         return null;
     }
 
-    protected boolean ballZoneAction(GameBall gameBall) {
+    private boolean ballZoneAction(GameBall gameBall) {
         GameTeam goal = getGoal(gameBall.getBlockVector());
         if (goal != null) {
             scoreGoal(goal, gameBall); // calls removeAllBalls()
@@ -329,7 +356,7 @@ public final class Game {
             }
         }
         state.setKickoffTeam(team != null ? team.toIndex() : random.nextInt(2));
-        Block block = kickoffVector.toBlock(getWorld());
+        Block block = kickoffVector.toBlock(world);
         block.setType(Material.DRAGON_EGG, false);
         GameBall gameBall = new GameBall();
         gameBall.setBlockVector(kickoffVector);
@@ -339,13 +366,13 @@ public final class Game {
 
     public void removeAllBalls() {
         for (GameBall gameBall : state.getBalls()) {
-            gameBall.remove(getWorld());
+            gameBall.remove(world);
         }
         state.getBalls().clear();
     }
 
     public void removeBall(GameBall gameBall) {
-        gameBall.remove(getWorld());
+        gameBall.remove(world);
         state.getBalls().remove(gameBall);
     }
 
@@ -427,7 +454,7 @@ public final class Game {
 
     public List<Player> getPresentPlayers() {
         List<Player> list = new ArrayList<>();
-        for (Player player : getWorld().getPlayers()) {
+        for (Player player : world.getPlayers()) {
             if (!board.getArea().contains(player.getLocation())) continue;
             list.add(player);
         }
@@ -444,7 +471,7 @@ public final class Game {
 
     public List<Player> getEligiblePlayers() {
         List<Player> list = new ArrayList<>();
-        for (Player player : getWorld().getPlayers()) {
+        for (Player player : world.getPlayers()) {
             if (!isOnField(player)) continue;
             if (player.getGameMode() == GameMode.SPECTATOR) continue;
             list.add(player);
@@ -462,12 +489,22 @@ public final class Game {
         return list;
     }
 
+    public Location getViewerLocation() {
+        final List<Vec3i> viewers = new ArrayList<>();
+        for (Cuboid c : board.getViewers()) {
+            viewers.addAll(c.enumerate());
+        }
+        return viewers.get(random.nextInt(viewers.size())).toCenterFloorLocation(world);
+    }
+
     public void warpOutside(Player player) {
-        player.teleport(board.getOutside().toLocation(getWorld()), TeleportCause.PLUGIN);
+        player.eject();
+        player.leaveVehicle();
+        player.teleport(getViewerLocation(), TeleportCause.PLUGIN);
     }
 
     public void teleportPlayersStartLocations(List<Player> players) {
-        final Location spawn = board.getKickoff().toLocation(getWorld());
+        final Location spawn = board.getKickoff().toLocation(world);
         for (int i = 0; i < 2; i += 1) {
             final GameTeam team = GameTeam.of(i);
             final List<Vec3i> spawns = board.getSpawns().get(i).enumerate();
@@ -476,7 +513,7 @@ public final class Game {
             final Iterator<Vec3i> iter = spawns.iterator();
             for (Player player : players) {
                 if (getTeam(player) != team) continue;
-                final Location location = iter.next().toLocation(getWorld());
+                final Location location = iter.next().toLocation(world);
                 final Vector lookAt = spawn.toVector().subtract(location.toVector()).normalize();
                 location.setDirection(lookAt);
                 player.teleport(location, TeleportCause.PLUGIN);
@@ -484,11 +521,12 @@ public final class Game {
                 player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
                 player.setFoodLevel(20);
                 player.setSaturation(20.0f);
+                player.setExhaustion(0f);
             }
         }
     }
 
-    protected void makeFlags() {
+    private void makeFlags() {
         List<Nation> nations = new ArrayList<>(Arrays.asList(Nation.values()));
         state.setNations(new ArrayList<>());
         for (GameTeam team : GameTeam.values()) {
@@ -518,7 +556,7 @@ public final class Game {
         }
         // WARNING: Assumes board along z axis!
         int centerZ = board.getArea().getCenter().getZ();
-        for (Chunk chunk : getWorld().getLoadedChunks()) {
+        for (Chunk chunk : world.getLoadedChunks()) {
             int x = chunk.getX() << 4;
             int z = chunk.getZ() << 4;
             // WARNING: Assumes board along z axis!
@@ -583,10 +621,9 @@ public final class Game {
 
     public void newPhase(GamePhase phase) {
         setupPhase(phase);
-        saveState();
     }
 
-    void setupPhase(GamePhase phase) {
+    private void setupPhase(GamePhase phase) {
         state.setPhase(phase);
         switch (phase) {
         case IDLE:
@@ -637,7 +674,7 @@ public final class Game {
             state.setKickoffStarted(System.currentTimeMillis());
             bossBar.name(txt);
             if (state.getBalls().isEmpty()) {
-                Block block = board.getKickoff().toBlock(getWorld());
+                Block block = board.getKickoff().toBlock(world);
                 block.setType(Material.DRAGON_EGG, false);
                 GameBall gameBall = new GameBall();
                 gameBall.setBlockVector(board.getKickoff());
@@ -653,7 +690,7 @@ public final class Game {
             state.setGoalStarted(System.currentTimeMillis());
             break;
         case END: {
-            for (Player player : getWorld().getPlayers()) {
+            for (Player player : world.getPlayers()) {
                 if (getTeam(player) != null) {
                     clearInventory(player);
                     TitlePlugin.getInstance().setColor(player, null);
@@ -702,6 +739,20 @@ public final class Game {
                 target.playSound(target.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, SoundCategory.MASTER, 0.5f, 1.5f);
             }
             bossBar.name(title);
+            final MinigameMatchCompleteEvent event = new MinigameMatchCompleteEvent(MinigameMatchType.ENDERBALL);
+            for (UUID uuid : state.getBallContacts().keySet()) {
+                final GameTeam team = getTeam(uuid);
+                if (team == null) continue;
+                event.addPlayerUuid(uuid);
+                if (team == winnerTeam) {
+                    event.addWinnerUuid(uuid);
+                }
+                if (plugin.getSave().isEvent()) {
+                    event.addFlags(MinigameFlag.EVENT);
+                }
+            }
+            event.callEvent();
+            MapReview.start(world, buildWorld).remindAll();
             break;
         }
         default:
@@ -709,7 +760,7 @@ public final class Game {
         }
     }
 
-    private void tick() {
+    public void tick() {
         if (state.getPhase().isPlaying()) {
             if (hungerTicks++ % 20 == 0) {
                 for (Player player : getPresentPlayers()) {
@@ -730,8 +781,8 @@ public final class Game {
                 state.setWaitForPlayersStarted(System.currentTimeMillis());
                 return;
             }
-            long total = 60000;
-            long timeLeft = timeLeft(state.getWaitForPlayersStarted(), total);
+            final long total = 20_000;
+            final long timeLeft = timeLeft(state.getWaitForPlayersStarted(), total);
             if (timeLeft <= 0 || skip) {
                 skip = false;
                 if (state.isManual()) {
@@ -740,7 +791,7 @@ public final class Game {
                     newPhase(GamePhase.TEAMS);
                 }
             } else {
-                bossBar.progress(clamp1((float) timeLeft / (float) total));
+                bossBar.progress(clamp1(1f - (float) timeLeft / (float) total));
             }
             break;
         }
@@ -864,7 +915,7 @@ public final class Game {
                     int x = field.getMin().x + random.nextInt(field.getMax().x - field.getMin().x + 1);
                     int z = field.getMin().z + random.nextInt(field.getMax().z - field.getMin().z + 1);
                     int y = field.getMin().y;
-                    Fireworks.spawnFirework(new Vec3i(x, y, z).toLocation(getWorld()));
+                    Fireworks.spawnFirework(new Vec3i(x, y, z).toLocation(world));
                 }
             }
             break;
@@ -873,19 +924,14 @@ public final class Game {
             long total = 1000L * 30L;
             long timeLeft = timeLeft(state.getEndStarted(), total);
             if (timeLeft <= 0) {
-                resetGame();
-                if (state.isManual()) {
-                    newPhase(GamePhase.IDLE);
-                } else {
-                    newPhase(GamePhase.WAIT_FOR_PLAYERS);
-                }
+                obsolete = true;
             } else {
                 if ((fireworkTicks++ % 10) == 0) {
                     Cuboid field = board.getField();
                     int x = field.getMin().x + random.nextInt(field.getMax().x - field.getMin().x + 1);
                     int z = field.getMin().z + random.nextInt(field.getMax().z - field.getMin().z + 1);
                     int y = field.getMin().y;
-                    Fireworks.spawnFirework(new Vec3i(x, y, z).toLocation(getWorld()));
+                    Fireworks.spawnFirework(new Vec3i(x, y, z).toLocation(world));
                 }
                 bossBar.progress(clamp1((float) timeLeft / (float) total));
             }
@@ -895,7 +941,7 @@ public final class Game {
         }
     }
 
-    protected Gui openNationGui(Player player, GameTeam team) {
+    private Gui openNationGui(Player player, GameTeam team) {
         int nationCount = 0;
         for (Nation nation : Nation.values()) {
             nationCount += 1;
@@ -917,7 +963,7 @@ public final class Game {
         return gui;
     }
 
-    protected int countNationVotes(Nation nation, GameTeam team) {
+    private int countNationVotes(Nation nation, GameTeam team) {
         if (nationVotes == null) return 0;
         int result = 0;
         for (Map.Entry<UUID, Nation> entry : nationVotes.entrySet()) {
@@ -928,7 +974,7 @@ public final class Game {
         return result;
     }
 
-    protected void updateNationGui(Player player, Gui gui, GameTeam team) {
+    private void updateNationGui(Player player, Gui gui, GameTeam team) {
         List<Nation> nations = new ArrayList<>();
         for (Nation nation : Nation.values()) {
             nations.add(nation);
@@ -956,7 +1002,7 @@ public final class Game {
         }
     }
 
-    protected void dress(Player player, GameTeam team) {
+    public void dress(Player player, GameTeam team) {
         clearInventory(player);
         if (team == null) return;
         player.getInventory().setChestplate(dye(Material.LEATHER_CHESTPLATE, team));
@@ -966,7 +1012,7 @@ public final class Game {
         TitlePlugin.getInstance().setColor(player, team.textColor);
     }
 
-    protected ItemStack dye(Material mat, GameTeam team) {
+    private ItemStack dye(Material mat, GameTeam team) {
         ItemStack item = new ItemStack(mat);
         LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
         meta.setColor(team.dyeColor.getColor());
@@ -980,7 +1026,7 @@ public final class Game {
         dress(player, getTeam(player));
     }
 
-    protected long timeLeft(long other, long total) {
+    private long timeLeft(long other, long total) {
         return Math.max(0L, other + total - System.currentTimeMillis());
     }
 
@@ -996,7 +1042,7 @@ public final class Game {
         return result;
     }
 
-    protected float clamp1(float in) {
+    private static float clamp1(float in) {
         return Math.max(0, Math.min(1, in));
     }
 

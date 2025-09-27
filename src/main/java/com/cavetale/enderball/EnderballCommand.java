@@ -6,6 +6,7 @@ import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.playercache.PlayerCache;
+import com.cavetale.fam.trophy.Highscore;
 import com.winthier.creative.BuildWorld;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -298,5 +300,8 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
     private void scoreReward(CommandSender sender) {
         int count = plugin.rewardHighscore();
         sender.sendMessage(text(count + " highscore(s) rewarded", AQUA));
+        for (Component component : Highscore.rewardMoneyWithFeedback(plugin, plugin.getSave().getScore(), "Enderball")) {
+            sender.sendMessage(component);
+        }
     }
 }

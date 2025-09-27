@@ -94,6 +94,7 @@ public final class Game {
     private BossBar bossBar;
     private int hungerTicks = 0;
     private int fireworkTicks = 0;
+    private int kickoffTicks;
     private final Map<UUID, Nation> nationVotes = new HashMap<>();
     private boolean obsolete;
     @Setter private boolean skip;
@@ -847,6 +848,28 @@ public final class Game {
                 newPhase(GamePhase.PLAY);
             } else {
                 bossBar.progress(clamp1((float) timeLeft / (float) total));
+            }
+            for (GameBall gameBall : state.getBalls()) {
+                // Push other teams away from the kickoff ball.
+                if (!gameBall.isBlock()) continue;
+                final int radius = 6;
+                final Location center = gameBall.getBlockVector().toCenterFloorLocation(world);
+                for (Player nearby : getPresentPlayers()) {
+                    final GameTeam nearbyTeam = getTeam(nearby);
+                    if (nearbyTeam == state.getKickoffTeam()) continue;
+                    final Location nearbyLocation = nearby.getLocation();
+                    if (center.distanceSquared(nearbyLocation) > radius * radius) continue;
+                    final Vector dir = nearbyLocation.toVector().subtract(center.toVector())
+                        .normalize().multiply(0.5);
+                    nearby.setVelocity(dir);
+                }
+                double angle = (double) kickoffTicks * Math.PI * 0.03;
+                Location particle = center.clone().add(Math.cos(angle) * radius, 0.1, Math.sin(angle) * radius);
+                world.spawnParticle(Particle.DUST, particle, 1, 0.0, 0.0, 0.0, 0.0, new Particle.DustOptions(state.getKickoffTeam().getColor(), 1.5f));
+                angle += Math.PI;
+                particle = center.clone().add(Math.cos(angle) * radius, 0.1, Math.sin(angle) * radius);
+                world.spawnParticle(Particle.DUST, particle, 1, 0.0, 0.0, 0.0, 0.0, new Particle.DustOptions(state.getKickoffTeam().getColor(), 1.5f));
+                kickoffTicks += 1;
             }
             break;
         }

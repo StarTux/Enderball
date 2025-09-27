@@ -59,6 +59,9 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         rootNode.addChild("skip").denyTabCompletion()
             .description("Skip cooldowns")
             .playerCaller(this::skip);
+        rootNode.addChild("viewer").arguments("<player>")
+            .description("Warp player to viewing spots")
+            .playerCaller(this::viewer);
         CommandNode teamNode = rootNode.addChild("team")
             .description("Team commands");
         teamNode.addChild("reset").denyTabCompletion()
@@ -111,6 +114,7 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
                     plugin.getLogger().log(Level.SEVERE, "Enabling game: " + buildWorld.getPath(), iae);
                     game.disable();
                     sender.sendMessage(text("...Error: " + iae.getMessage(), RED));
+                    return;
                 }
                 plugin.getGames().add(game);
                 game.bringPlayersFromLobby();
@@ -171,6 +175,17 @@ public final class EnderballCommand extends AbstractCommand<EnderballPlugin> {
         if (game == null) throw new CommandWarn("No game here");
         game.setSkip(true);
         player.sendMessage(text("Skipping...", YELLOW));
+    }
+
+    private boolean viewer(Player player, String[] args) {
+        if (args.length != 1) return false;
+        final Player target = Bukkit.getPlayerExact(args[0]);
+        if (target == null) throw new CommandWarn("Player not found: " + args[0]);
+        final Game game = Game.in(player.getWorld());
+        if (game == null) throw new CommandWarn("No game here");
+        target.teleport(game.getViewerLocation());
+        player.sendMessage(text("Teleported " + target.getName() + " to a viewer spot", YELLOW));
+        return true;
     }
 
     private boolean event(CommandSender sender, String[] args) {

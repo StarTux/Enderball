@@ -23,10 +23,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import lombok.Getter;
@@ -123,7 +125,7 @@ public final class Game {
             if (AFKPlugin.isAfk(player)) {
                 player.teleport(getViewerLocation());
             } else {
-                player.teleport(world.getSpawnLocation());
+                player.teleport(board.getKickoff().toCenterFloorLocation(world));
             }
             player.setGameMode(GameMode.ADVENTURE);
             player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
@@ -453,15 +455,10 @@ public final class Game {
     }
 
     public List<Player> getPresentPlayers() {
-        List<Player> list = new ArrayList<>();
-        for (Player player : world.getPlayers()) {
-            if (!board.getArea().contains(player.getLocation())) continue;
-            list.add(player);
-        }
-        return list;
+        return world.getPlayers();
     }
 
-    boolean isOnField(Player player) {
+    public boolean isOnField(Player player) {
         if (board.getField().contains(player.getLocation())) return true;
         for (Cuboid goal : board.getGoals()) {
             if (goal.contains(player.getLocation())) return true;
@@ -490,11 +487,20 @@ public final class Game {
     }
 
     public Location getViewerLocation() {
-        final List<Vec3i> viewers = new ArrayList<>();
+        final Set<Vec3i> set = new HashSet<>();
         for (Cuboid c : board.getViewers()) {
-            viewers.addAll(c.enumerate());
+            set.addAll(c.enumerate());
         }
-        return viewers.get(random.nextInt(viewers.size())).toCenterFloorLocation(world);
+        final List<Vec3i> list = new ArrayList<>(set);
+        Collections.shuffle(list);
+        for (Vec3i it : list) {
+            if (!it.toBlock(world).isEmpty()) continue;
+            final Location result = list.get(random.nextInt(list.size())).toCenterFloorLocation(world);
+            final Location lookAt = board.getKickoff().toCenterLocation(world);
+            result.setDirection(lookAt.toVector().subtract(result.toVector()));
+            return result;
+        }
+        throw new IllegalStateException("No viewer location found: " + buildWorld.getPath());
     }
 
     public void warpOutside(Player player) {
@@ -598,7 +604,7 @@ public final class Game {
         }
     }
 
-    void makeTeams() {
+    private void makeTeams() {
         List<Player> players = getEligiblePlayers();
         Collections.shuffle(players, random);
         int half = players.size() / 2;
@@ -650,6 +656,7 @@ public final class Game {
             for (Player player : getPresentPlayers()) {
                 GameTeam team = getTeam(player);
                 if (team == null) continue;
+                clearInventory(player);
                 dress(player, team);
                 if (plugin.getSave().isEvent() && !plugin.getSave().isTesting()) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
@@ -777,13 +784,13 @@ public final class Game {
         case IDLE: return;
         case WAIT_FOR_PLAYERS: {
             List<Player> players = getEligiblePlayers();
-            if (players.isEmpty()) {
-                state.setWaitForPlayersStarted(System.currentTimeMillis());
-                return;
-            }
             final long total = 20_000;
             final long timeLeft = timeLeft(state.getWaitForPlayersStarted(), total);
             if (timeLeft <= 0 || skip) {
+                if (players.isEmpty()) {
+                    obsolete = true;
+                    return;
+                }
                 skip = false;
                 if (state.isManual()) {
                     newPhase(GamePhase.KICKOFF);
@@ -796,7 +803,7 @@ public final class Game {
             break;
         }
         case PICK_FLAG: {
-            long total = 60000;
+            long total = 60_000L;
             long timeLeft = timeLeft(state.getPickFlagStarted(), total);
             bossBar.progress(clamp1((float) timeLeft / (float) total));
             int playerCount = state.getTeams().size();
@@ -824,7 +831,7 @@ public final class Game {
             break;
         }
         case KICKOFF: {
-            long total = 30000;
+            long total = 30_000;
             long timeLeft = timeLeft(state.getKickoffStarted(), total);
             if (timeLeft <= 0 || skip) {
                 skip = false;
@@ -903,7 +910,7 @@ public final class Game {
             break;
         }
         case GOAL: {
-            long total = 1000L * 20L;
+            long total = 20_000L;
             long timeLeft = timeLeft(state.getGoalStarted(), total);
             if (timeLeft <= 0) {
                 newPhase(GamePhase.KICKOFF);
@@ -921,7 +928,7 @@ public final class Game {
             break;
         }
         case END: {
-            long total = 1000L * 30L;
+            long total = 60_000L;
             long timeLeft = timeLeft(state.getEndStarted(), total);
             if (timeLeft <= 0) {
                 obsolete = true;

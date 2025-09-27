@@ -142,13 +142,13 @@ public final class EventListener implements Listener {
         final List<Component> lines = new ArrayList<>();
         if (game != null) {
             game.onSidebar(player, lines);
+            event.bossbar(PlayerHudPriority.HIGH, game.getBossBar());
         }
         if (game == null && plugin.getSave().isEvent()) {
             lines.addAll(Highscore.sidebar(plugin.getHighscore()));
         }
         if (lines.isEmpty()) return;
         event.sidebar(PlayerHudPriority.HIGHEST, lines);
-        event.bossbar(PlayerHudPriority.HIGH, game.getBossBar());
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.NORMAL)

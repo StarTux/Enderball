@@ -652,6 +652,7 @@ public final class Game {
         case TEAMS:
             makeTeams();
             setupPhase(GamePhase.PICK_FLAG);
+            buildWorld.announceMap(world);
             break;
         case PICK_FLAG:
             bossBar.name(text("Pick a Nation", GREEN));

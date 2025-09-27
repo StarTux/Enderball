@@ -243,7 +243,7 @@ public final class Game {
         fallingBlock.setGlowing(true);
         kick.ball.setEntityUuid(fallingBlock.getUniqueId());
         kick.ball.setLastKicker(player.getUniqueId());
-        for (Entity entity : world.getNearbyEntities(fallingBlock.getBoundingBox().expand(0.25))) {
+        for (Entity entity : world.getNearbyEntities(fallingBlock.getBoundingBox().expand(1.5))) {
             if (entity instanceof Player collider) {
                 kick.ball.getColliders().add(collider.getUniqueId());
             }

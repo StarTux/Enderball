@@ -3,6 +3,7 @@ package com.cavetale.enderball;
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.event.player.PlayerTeamQuery;
+import com.cavetale.core.struct.Vec3i;
 import com.cavetale.fam.trophy.Highscore;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +12,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.FallingBlock;
@@ -28,6 +30,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 @RequiredArgsConstructor
 public final class EventListener implements Listener {
@@ -160,14 +163,14 @@ public final class EventListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.NORMAL)
-    void onFoodLevelChange(FoodLevelChangeEvent event) {
+    private void onFoodLevelChange(FoodLevelChangeEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         Game game = Game.in(player.getWorld());
         if (game != null) game.onFoodLevelChange(event, player);
     }
 
     @EventHandler
-    protected void onPlayerTeamQuery(PlayerTeamQuery query) {
+    private void onPlayerTeamQuery(PlayerTeamQuery query) {
         for (Game game : plugin.getGames()) {
             if (game.getState().getTeams().isEmpty()) continue;
             if (game.getState().getNations().isEmpty()) continue;
@@ -182,6 +185,22 @@ public final class EventListener implements Listener {
                     query.setTeam(player, team);
                 }
             }
+        }
+    }
+
+    /**
+     * Joining in the lobby while a game is going puts you in the game
+     * as a viewer.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    private void onPlayerSpawnLocation(PlayerSpawnLocationEvent event) {
+        if (!plugin.getGames().isEmpty() && plugin.getLobby().isWorld(event.getSpawnLocation().getWorld())) {
+            final Game game = plugin.getGames().get(0);
+            final Location spawnLocation = game.getViewerLocation();
+            event.setSpawnLocation(spawnLocation);
+            plugin.getLogger().info("Setting player spawn location in game: " + game.getWorld().getName() + ": " + Vec3i.of(spawnLocation));
+            // PlayerSpawnLocationEvent#setSpawnLocation does not retain pitch and yaw.
+            Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().teleport(spawnLocation));
         }
     }
 }

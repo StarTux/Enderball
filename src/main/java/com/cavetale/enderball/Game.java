@@ -494,13 +494,14 @@ public final class Game {
         final List<Vec3i> list = new ArrayList<>(set);
         Collections.shuffle(list);
         for (Vec3i it : list) {
-            if (!it.toBlock(world).isEmpty()) continue;
-            final Location result = list.get(random.nextInt(list.size())).toCenterFloorLocation(world);
+            if (!it.toBlock(world).getCollisionShape().getBoundingBoxes().isEmpty()) continue;
+            final Location result = it.toCenterFloorLocation(world);
             final Location lookAt = board.getKickoff().toCenterLocation(world);
-            result.setDirection(lookAt.toVector().subtract(result.toVector()));
+            result.setDirection(lookAt.toVector().subtract(result.toVector()).normalize());
             return result;
         }
-        throw new IllegalStateException("No viewer location found: " + buildWorld.getPath());
+        plugin.getLogger().warning("No viewer spot found: " + buildWorld.getName() + " list:" + list.size());
+        return list.get(0).toCenterFloorLocation(world);
     }
 
     public void warpOutside(Player player) {
@@ -656,7 +657,6 @@ public final class Game {
             for (Player player : getPresentPlayers()) {
                 GameTeam team = getTeam(player);
                 if (team == null) continue;
-                clearInventory(player);
                 dress(player, team);
                 if (plugin.getSave().isEvent() && !plugin.getSave().isTesting()) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
@@ -749,7 +749,6 @@ public final class Game {
             final MinigameMatchCompleteEvent event = new MinigameMatchCompleteEvent(MinigameMatchType.ENDERBALL);
             for (UUID uuid : state.getBallContacts().keySet()) {
                 final GameTeam team = getTeam(uuid);
-                if (team == null) continue;
                 event.addPlayerUuid(uuid);
                 if (team == winnerTeam) {
                     event.addWinnerUuid(uuid);

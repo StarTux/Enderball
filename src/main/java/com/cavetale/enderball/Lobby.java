@@ -17,6 +17,10 @@ public final class Lobby {
         return Bukkit.getWorlds().get(0);
     }
 
+    public boolean isWorld(World world) {
+        return world.equals(getWorld());
+    }
+
     public void warp(Player player) {
         player.eject();
         player.leaveVehicle();

@@ -27,11 +27,16 @@ public final class Lobby {
         player.teleport(getWorld().getSpawnLocation());
         player.setFallDistance(0f);
         player.setVelocity(new Vector());
+        onJoin(player);
+    }
+
+    public void onJoin(Player player) {
         player.setGameMode(GameMode.ADVENTURE);
         player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
         player.setFoodLevel(20);
         player.setSaturation(20.0f);
         player.setExhaustion(0f);
+        player.getInventory().clear();
     }
 
     public List<Player> getPlayers() {

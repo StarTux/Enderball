@@ -21,18 +21,6 @@ public enum GameTeam {
         this.chatBlock = text("\u2588", textColor);
     }
 
-    public static GameTeam of(int i) {
-        return i == 0
-            ? RED
-            : i == 1
-            ? BLUE
-            : null;
-    }
-
-    public int toIndex() {
-        return ordinal();
-    }
-
     public GameTeam other() {
         switch (this) {
         case RED: return BLUE;

@@ -147,8 +147,6 @@ public final class Game {
     }
 
     public void resetGame() {
-        state.getScores().set(0, 0);
-        state.getScores().set(1, 0);
         state.getTeams().clear();
         state.setNations(new ArrayList<>());
         removeAllBalls();
@@ -209,7 +207,7 @@ public final class Game {
             warpOutside(player);
             return;
         }
-        if (state.getPhase() == GamePhase.KICKOFF && state.getKickoffTeam() != team.toIndex()) return;
+        if (state.getPhase() == GamePhase.KICKOFF && state.getKickoffTeam() != team) return;
         GameBall ball = getOrCreateBall(block);
         Kick.Strength strength = player.isSprinting() ? Kick.Strength.LONG : Kick.Strength.SHORT;
         Kick.Height height = Kick.Height.of(event.getAction());
@@ -277,9 +275,9 @@ public final class Game {
     }
 
     private GameTeam getGoal(Vec3i vec) {
-        for (int i = 0; i < 2; i += 1) {
-            Cuboid cuboid = board.getGoals().get(i);
-            if (cuboid.contains(vec)) return GameTeam.of(i);
+        for (GameTeam team : GameTeam.values()) {
+            final Cuboid cuboid = board.getGoals().get(team.ordinal());
+            if (cuboid.contains(vec)) return team;
         }
         return null;
     }
@@ -363,7 +361,9 @@ public final class Game {
                 }
             }
         }
-        state.setKickoffTeam(team != null ? team.toIndex() : random.nextInt(2));
+        state.setKickoffTeam(team != null
+                             ? team
+                             : GameTeam.values()[random.nextInt(2)]);
         Block block = kickoffVector.toBlock(world);
         block.setType(Material.DRAGON_EGG, false);
         GameBall gameBall = new GameBall();
@@ -407,8 +407,7 @@ public final class Game {
         removeAllBalls();
         if (state.getPhase() != GamePhase.PLAY) return;
         GameTeam team = goal.other();
-        int index = team.toIndex();
-        state.getScores().set(index, state.getScores().get(index) + 1);
+        state.addGoal(team);
         Player player = gameBall.getLastKickerPlayer();
         Component title = text("Goal!", team.textColor);
         Component subtitle = getScoreComponent();
@@ -452,7 +451,7 @@ public final class Game {
         }
         plugin.getLogger().info("Goal for " + team + ": " + (player != null ? player.getName() : "null"));
         bossBar.name(chat);
-        state.setKickoffTeam(goal.toIndex());
+        state.setKickoffTeam(goal);
         if (Math.abs(getScore(GameTeam.RED) - getScore(GameTeam.BLUE)) >= 3) {
             newPhase(GamePhase.END);
         } else {
@@ -518,9 +517,8 @@ public final class Game {
 
     public void teleportPlayersStartLocations(List<Player> players) {
         final Location spawn = board.getKickoff().toLocation(world);
-        for (int i = 0; i < 2; i += 1) {
-            final GameTeam team = GameTeam.of(i);
-            final List<Vec3i> spawns = board.getSpawns().get(i).enumerate();
+        for (GameTeam team : GameTeam.values()) {
+            final List<Vec3i> spawns = board.getSpawns().get(team.ordinal()).enumerate();
             Collections.shuffle(spawns);
             // Bug: We assume there are enough spawns for all players!
             final Iterator<Vec3i> iter = spawns.iterator();
@@ -669,19 +667,19 @@ public final class Game {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
                 }
             }
-            state.setKickoffTeam(random.nextInt(2));
+            state.setKickoffTeam(GameTeam.values()[random.nextInt(2)]);
             state.setGameStarted(System.currentTimeMillis());
             setupPhase(GamePhase.KICKOFF);
             break;
         }
         case KICKOFF: {
-            GameTeam team = GameTeam.of(state.getKickoffTeam());
-            Nation nation = getTeamNation(team);
-            Component txt = textOfChildren(text("Kickoff for ", WHITE),
-                                           nation.component,
-                                           text(nation.name, team.textColor));
-            Title title = Title.title(empty(), txt,
-                                      times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO));
+            final GameTeam team = state.getKickoffTeam();
+            final Nation nation = getTeamNation(team);
+            final Component txt = textOfChildren(text("Kickoff for ", WHITE),
+                                                 nation.component,
+                                                 text(nation.name, team.textColor));
+            final Title title = Title.title(empty(), txt,
+                                            times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO));
             for (Player player : getPresentPlayers()) {
                 player.showTitle(title);
             }
@@ -1060,7 +1058,7 @@ public final class Game {
     }
 
     public int getScore(GameTeam team) {
-        return state.getScores().get(team.toIndex());
+        return state.getGoals(team);
     }
 
     public int countTeamSize(GameTeam team) {

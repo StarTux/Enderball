@@ -12,7 +12,7 @@ import lombok.Data;
 public final class GameState implements Serializable {
     private GamePhase phase = GamePhase.IDLE;
     private List<GameBall> balls = new ArrayList<>();
-    private int kickoffTeam;
+    private GameTeam kickoffTeam;
     private List<Integer> scores = new ArrayList<>(List.of(0, 0));
     private Map<UUID, GameTeam> teams = new HashMap<>();
     private List<Nation> nations = new ArrayList<>();
@@ -27,5 +27,13 @@ public final class GameState implements Serializable {
 
     public void addBallContact(UUID uuid) {
         ballContacts.put(uuid, ballContacts.getOrDefault(uuid, 0) + 1);
+    }
+
+    public void addGoal(GameTeam team) {
+        scores.set(team.ordinal(), getGoals(team) + 1);
+    }
+
+    public int getGoals(GameTeam team) {
+        return scores.get(team.ordinal());
     }
 }

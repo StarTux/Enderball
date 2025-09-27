@@ -43,6 +43,9 @@ public final class EventListener implements Listener {
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     private void onPlayerJoin(PlayerJoinEvent event) {
         Game.ifIn(event.getPlayer().getWorld(), game -> game.onJoin(event.getPlayer()));
+        if (plugin.getLobby().isWorld(event.getPlayer().getWorld())) {
+            plugin.getLobby().onJoin(event.getPlayer());
+        }
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)

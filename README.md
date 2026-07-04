@@ -12,4 +12,4 @@ Required are as per `GameBoard.java`:
 - `kickoff` (one block, unique)
 - `goal` (two, labeled `red` and `blue`)
 - `spawn` (two, labeled `red` and `blue`)
-- `viewers` (multiple, at least one, where viewers will be teleported to)
+- `viewer` (multiple, at least one, where viewers will be teleported to)

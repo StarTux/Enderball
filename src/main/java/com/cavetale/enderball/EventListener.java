@@ -27,6 +27,7 @@ import org.bukkit.event.entity.EntityDropItemEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerArmorStandManipulateEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -196,5 +197,11 @@ public final class EventListener implements Listener {
     @EventHandler
     private void onEntityDamage(EntityDamageEvent event) {
         Game.ifIn(event.getEntity().getWorld(), game -> event.setCancelled(true));
+    }
+
+    @EventHandler
+    private void onPlayerArmorStandManipulate(PlayerArmorStandManipulateEvent event) {
+        if (event.getPlayer().isOp()) return;
+        Game.ifIn(event.getRightClicked().getWorld(), game -> event.setCancelled(true));
     }
 }

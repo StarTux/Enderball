@@ -203,6 +203,7 @@ public final class Game {
     public void onKickBall(Player player, Block block, PlayerInteractEvent event) {
         event.setCancelled(true);
         if (state.getPhase() != GamePhase.KICKOFF && state.getPhase() != GamePhase.PLAY) return;
+        if (!board.getField().contains(block)) return;
         GameTeam team = getTeam(player);
         if (team == null) {
             warpOutside(player);
